@@ -5,6 +5,9 @@ No build step, no external assets, no network calls — open `basketball-rpg.htm
 in a browser and play.
 
 ## What's inside
+- **Quick Play**: straight into a game against the CPU, no setup.
+- **3-Point Contest**: five racks in sixty seconds, money balls worth two,
+  best score saved.
 - **My Journey**: create a player (position, height, attributes, skin tone,
   hair, jersey number), get drafted by a fictional franchise, and chase a
   championship across a 3-round playoff bracket.
@@ -19,18 +22,17 @@ in a browser and play.
   Old Gym and Rooftop (or Random).
 - Ball physics: true parabolic shots to an elevated rim, rim and backboard
   bounces, physical passes that lead the receiver, and out-of-bounds calls.
+- Settings (quarter length, screen shake, coaching tips), first-game coaching
+  tips, and gamepad support (two pads for Versus).
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
   (Web Audio API, no audio files), difficulty levels, and touch controls that
   auto-appear on phones/tablets.
 
 ## Publishing
-- **itch.io**: run `web/make-itch-build.sh`, upload the resulting
-  `web/hoop-legends-web.zip`, mark it "played in the browser". See
-  `web/README.md`.
-- **Poki / CrazyGames**: SDK hooks are already wired via a no-op-safe
-  `Platform` shim; see `web/README.md` for the script tag to add.
-- **Steam / desktop**: a lightweight Tauri v2 wrapper lives in `desktop/`;
-  see `desktop/README.md`.
+Run `web/make-portal-build.sh` to get upload-ready zips for itch.io, Poki and
+CrazyGames (the right SDK script is added for each), plus store art in
+`web/assets/`. See `web/README.md` for what the SDK integration does and how to
+submit. A lightweight Tauri v2 wrapper for Steam/desktop lives in `desktop/`.
 
 Everything (art, music, names, teams) is original and safe for commercial
 distribution.

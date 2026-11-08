@@ -175,6 +175,10 @@
   .tcShoot{ right:14px; bottom:14px; width:78px; height:78px; font-size:14px; border-color:var(--accent); }
   .tcPass{ right:100px; bottom:20px; width:58px; height:58px; }
   .tcSpecial{ right:20px; bottom:104px; width:58px; height:58px; }
+  #rotateHint{ display:none; position:fixed; inset:0; z-index:80; background:var(--bg-deep); align-items:center; justify-content:center; text-align:center; padding:24px; }
+  body.portrait.inGame #rotateHint{ display:flex; }
+  .rotIcon{ width:44px; height:72px; border:4px solid var(--text); border-radius:6px; margin:0 auto 16px; animation:rot 1.6s ease-in-out infinite; }
+  @keyframes rot{ 0%,30%{ transform:rotate(0); } 60%,100%{ transform:rotate(-90deg); } }
   @media (max-width:560px){
     .panel{ padding:22px 18px; } h1{ font-size:32px; } .brandName{ font-size:40px; }
     .optGrid{ grid-template-columns:1fr; } .menuFoot .small-txt{ margin-left:0; }
@@ -193,9 +197,11 @@
         <div class="brandSub">Career · Franchise · Head-to-head</div></div>
       </div>
       <div class="menuList">
-        <button class="menuItem" id="modeJourney"><span class="miNum">01</span><span class="miBody"><span class="miTitle">My Journey</span><span class="miDesc">Build one player, level up and carry your team through a three-round playoff run.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeFranchise"><span class="miNum">02</span><span class="miBody"><span class="miTitle">Franchise</span><span class="miDesc">Run a whole team: a 12-game season, trades, playoffs and the rookie draft.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeVersus"><span class="miNum">03</span><span class="miBody"><span class="miTitle">Local Versus</span><span class="miDesc">Two players on one keyboard. Pick both teams and play it out.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeQuick"><span class="miNum">01</span><span class="miBody"><span class="miTitle">Quick Play</span><span class="miDesc">Jump straight into a game against the CPU. No setup.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeJourney"><span class="miNum">02</span><span class="miBody"><span class="miTitle">My Journey</span><span class="miDesc">Build one player, level up and carry your team through a three-round playoff run.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeFranchise"><span class="miNum">03</span><span class="miBody"><span class="miTitle">Franchise</span><span class="miDesc">Run a whole team: a 12-game season, trades, playoffs and the rookie draft.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeShootout"><span class="miNum">04</span><span class="miBody"><span class="miTitle">3-Point Contest</span><span class="miDesc" id="shootoutDesc">Five racks, sixty seconds. The last ball on each rack is worth two.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeVersus"><span class="miNum">05</span><span class="miBody"><span class="miTitle">Local Versus</span><span class="miDesc">Two players on one keyboard. Pick both teams and play it out.</span></span><span class="miArrow">&rsaquo;</span></button>
       </div>
       <div class="optGrid">
         <div class="optLabel">Difficulty</div>
@@ -209,6 +215,7 @@
         <button id="btnContinue" class="small" style="display:none">Continue</button>
         <button id="btnLoadGame" class="small ghost">Load Game</button>
         <button id="btnMuteMenu" class="small ghost">Sound: On</button>
+        <button id="btnSettings" class="small ghost">Settings</button>
         <span class="small-txt">Progress auto-saves after every game.</span>
       </div>
     </div>
@@ -306,6 +313,7 @@
 
       <div class="row"><button id="btnPlayGame">Tip Off Next Game</button>
         <button id="btnHubSave" class="small ghost">Save</button>
+        <button id="btnHubReward" class="small ghost" style="display:none">Watch ad: +2 SP</button>
         <button id="btnHubMenu" class="small ghost">Menu</button></div>
       <div class="flashMsg" id="hubMsg"></div>
       <div id="hubBox"></div>
@@ -426,6 +434,27 @@
     </div>
   </div>
 
+  <div id="rotateHint"><div><div class="rotIcon"></div><b>Rotate your device</b><p class="small-txt">Hoop Legends plays in landscape.</p></div></div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div id="settingsModal" class="modalWrap">
+    <div class="panel" style="max-width:460px;text-align:left;">
+      <h1 style="font-size:30px;">Settings</h1>
+      <div class="optGrid" style="grid-template-columns:130px 1fr;">
+        <div class="optLabel">Quarter length</div>
+        <div><div class="seg" data-pref="qlen"><button class="diffBtn" data-v="1">1 min</button><button class="diffBtn" data-v="2">2 min</button><button class="diffBtn" data-v="3">3 min</button></div></div>
+        <div class="optLabel">Screen shake</div>
+        <div><div class="seg" data-pref="shake"><button class="diffBtn" data-v="on">On</button><button class="diffBtn" data-v="off">Off</button></div></div>
+        <div class="optLabel">Coaching tips</div>
+        <div><div class="seg" data-pref="tips"><button class="diffBtn" data-v="on">On</button><button class="diffBtn" data-v="off">Off</button></div></div>
+        <div class="optLabel">Controls</div>
+        <div class="small-txt" style="line-height:1.7">Keyboard, touch, or a gamepad (pad 1 = player 1, pad 2 = player 2).
+          Stick/D-pad move, A shoot, X pass, Y special, triggers sprint, Start pause.</div>
+      </div>
+      <div class="row" style="justify-content:flex-start"><button id="btnTipsReset" class="small ghost">Show tips again</button><button id="btnSettingsClose" class="small">Done</button></div>
+    </div>
+  </div>
+
   <!-- ============ SAVE / LOAD MODAL (replaces prompt(), which portals block) ============ -->
   <div id="slotModal" class="modalWrap">
     <div class="panel" style="max-width:440px;">
@@ -441,7 +470,8 @@
       <h1>Finals MVP</h1>
       <canvas id="trophyCanvas" width="300" height="260" style="image-rendering:pixelated; border:1px solid var(--border); background:#0d0f13; max-width:100%;"></canvas>
       <p id="mvpText" class="story"></p>
-      <div class="row"><button id="btnPostChamp">Continue My Journey</button></div>
+      <div id="resultBox"></div>
+      <div class="row"><button id="btnPostChamp">Continue My Journey</button><button id="btnPostMenu" class="ghost" style="display:none">Menu</button></div>
     </div>
   </div>
 
@@ -546,7 +576,7 @@ const Audio8 = (function(){
       let step=0;
       const beat=0.32;
       function tick(){
-        if(self._muted || c.state!=='running'){ return; }
+        if(self._muted || self._ad || c.state!=='running'){ return; }
         const t=c.currentTime;
         const bi=step%8;
         // bass
@@ -569,9 +599,11 @@ const Audio8 = (function(){
       tick();
     },
     stopMusic(){ if(this._timer){ clearInterval(this._timer); this._timer=null; } },
+    _ad:false,
+    adMute(on){ this._ad=!!on; try{ ac(); master.gain.setValueAtTime((this._ad||this._muted)?0:1, ctx.currentTime); }catch(e){} },
     toggleMute(){
       this._muted=!this._muted;
-      try{ ac(); master.gain.setValueAtTime(this._muted?0:1, ctx.currentTime); }catch(e){}
+      try{ ac(); master.gain.setValueAtTime((this._muted||this._ad)?0:1, ctx.currentTime); }catch(e){}
       try{ localStorage.setItem('hoopLegendsMuted', this._muted?'1':'0'); }catch(e){}
       return this._muted;
     }
@@ -585,32 +617,61 @@ const Audio8 = (function(){
    their <script> SDK tag and these fire the required gameplay + ad events.
 ========================================================================= */
 const Platform = (function(){
-  let poki = (typeof window!=='undefined') && window.PokiSDK;
-  let crazy = (typeof window!=='undefined') && window.CrazyGames && window.CrazyGames.SDK;
+  // Every call is a no-op unless a portal SDK script was added to the page, so the
+  // same file runs offline, on itch.io, on Poki and on CrazyGames.
+  let sdk=null, inGameplay=false, adActive=false, breaks=0;
+  const P=()=>window.PokiSDK, C=()=>window.CrazyGames && window.CrazyGames.SDK;
+  function adStart(){ adActive=true; try{ Audio8.adMute(true); }catch(e){} }
+  function adEnd(){ adActive=false; try{ Audio8.adMute(false); }catch(e){} }
   return {
+    get name(){ return sdk; },
+    get adActive(){ return adActive; },
     init(){
-      try{ if(poki && poki.init) poki.init().catch(()=>{}); }catch(e){}
-      try{ if(crazy && crazy.init) crazy.init(); }catch(e){}
+      try{
+        if(P()){ sdk='poki'; return Promise.resolve(P().init()).catch(()=>{}); }   // still usable behind an ad blocker
+        if(C()){ sdk='crazy'; return Promise.resolve(C().init()).then(()=>{ try{ C().game.loadingStart(); }catch(e){} }).catch(()=>{}); }
+      }catch(e){}
+      return Promise.resolve();
+    },
+    loadingDone(){
+      try{ if(sdk==='poki') P().gameLoadingFinished(); if(sdk==='crazy') C().game.loadingStop(); }catch(e){}
     },
     gameplayStart(){
-      try{ if(poki && poki.gameplayStart) poki.gameplayStart(); }catch(e){}
-      try{ if(crazy && crazy.game && crazy.game.gameplayStart) crazy.game.gameplayStart(); }catch(e){}
+      if(inGameplay || adActive) return; inGameplay=true;
+      try{ if(sdk==='poki') P().gameplayStart(); if(sdk==='crazy') C().game.gameplayStart(); }catch(e){}
     },
     gameplayStop(){
-      try{ if(poki && poki.gameplayStop) poki.gameplayStop(); }catch(e){}
-      try{ if(crazy && crazy.game && crazy.game.gameplayStop) crazy.game.gameplayStop(); }catch(e){}
+      if(!inGameplay) return; inGameplay=false;
+      try{ if(sdk==='poki') P().gameplayStop(); if(sdk==='crazy') C().game.gameplayStop(); }catch(e){}
     },
-    // show a commercial break, then run `done` (always runs, even with no SDK)
+    // natural break between games: maybe an ad, then always run `done` exactly once
     commercialBreak(done){
+      breaks++;
+      let called=false;
+      const finish=()=>{ if(called) return; called=true; adEnd(); done(); };
+      if(!sdk || breaks===1){ finish(); return; }          // never an ad before the very first game
+      this.gameplayStop();
       try{
-        if(poki && poki.commercialBreak){ poki.commercialBreak().then(done, done); return; }
-        if(crazy && crazy.ad && crazy.ad.requestAd){ crazy.ad.requestAd('midgame', { adFinished:done, adError:done }); return; }
+        if(sdk==='poki'){ P().commercialBreak(adStart).then(finish, finish); return; }
+        if(sdk==='crazy'){ C().ad.requestAd('midgame', { adStarted:adStart, adFinished:finish, adError:finish }); return; }
       }catch(e){}
-      done();
-    }
+      finish();
+    },
+    // opt-in rewarded ad; returns false when no portal SDK is present
+    rewardedBreak(onReward){
+      let called=false;
+      const end=ok=>{ if(called) return; called=true; adEnd(); if(ok) onReward(); };
+      try{
+        if(sdk==='poki'){ P().rewardedBreak(adStart).then(ok=>end(!!ok), ()=>end(false)); return true; }
+        if(sdk==='crazy'){ C().ad.requestAd('rewarded', { adStarted:adStart, adFinished:()=>end(true), adError:()=>end(false) }); return true; }
+      }catch(e){}
+      return false;
+    },
+    happyTime(){ try{ if(sdk==='crazy') C().game.happytime(); }catch(e){} }
   };
 })();
-try{ Platform.init(); }catch(e){}
+// start a game behind an (optional) ad break
+function tipOff(fn){ Audio8.ensureRunning(); Platform.commercialBreak(fn); }
 
 /* =========================================================================
    GLOBAL STATE
@@ -691,6 +752,7 @@ const ROUND_NAMES = ["Quarterfinals","Semifinals","Championship","Champion"];
 const PREFS_KEY='hoopLegendsPrefs';
 let PREFS = (()=>{ try{ return JSON.parse(localStorage.getItem(PREFS_KEY))||{}; }catch(e){ return {}; } })();
 function savePrefs(){ try{ localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); }catch(e){} }
+function quarterLen(){ return 60*(PREFS.qlen||1); }
 function pickArena(){
   const k = PREFS.arena || 'pro';
   if(k==='random') return ARENA_KEYS[Math.floor(Math.random()*ARENA_KEYS.length)];
@@ -698,6 +760,7 @@ function pickArena(){
 }
 
 function showScreen(id){
+  document.body.classList.toggle('inGame', id==='screen-game');
   document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
@@ -938,8 +1001,9 @@ function teamPower(idx){
 function simGame(aIdx,bIdx){
   const pa=teamPower(aIdx), pb=teamPower(bIdx);
   // scaled to match the scoring of a played game (four 1-minute quarters)
-  const sa=Math.round(26 + (pa-60)*0.45 + Math.random()*12);
-  const sb=Math.round(26 + (pb-60)*0.45 + Math.random()*12);
+  const m=PREFS.qlen||1;
+  const sa=Math.round((26 + (pa-60)*0.45 + Math.random()*12)*m);
+  const sb=Math.round((26 + (pb-60)*0.45 + Math.random()*12)*m);
   let A=sa,B=sb; if(A===B){ Math.random()<0.5?A++:B++; }
   return { a:A, b:B, aWin:A>B };
 }
@@ -1149,7 +1213,7 @@ function frOpponentTeam(){
 
 document.getElementById('btnFrPlay').addEventListener('click', ()=>{
   Audio8.ensureRunning(); Audio8.startMusic(); Audio8.click();
-  startGame(frOpponentTeam());
+  const opp=frOpponentTeam(); tipOff(()=>startGame(opp));
 });
 document.getElementById('btnFrSim').addEventListener('click', ()=>{
   Audio8.click();
@@ -1169,6 +1233,73 @@ document.getElementById('btnFrSimWeek').addEventListener('click', ()=>{
   }
   renderFranchise();
 });
+
+/* ---------------- QUICK PLAY + 3-POINT CONTEST ---------------- */
+function quickPlayer(name){
+  return { name, position:'Guard', heightIn:76, attrs:{ shooting:7, passing:7, speed:7, defense:6 },
+    level:1, xp:0, xpToNext:100, sp:0, badges:[],
+    skinIdx:Math.floor(Math.random()*SKINS.length), hairIdx:Math.floor(Math.random()*HAIRS.length),
+    hairStyle:HAIR_STYLES[Math.floor(Math.random()*HAIR_STYLES.length)], jerseyNum:Math.floor(Math.random()*99) };
+}
+let quickTeams = null;
+function quickPlay(rematch){
+  Audio8.startMusic();
+  S.mode='quick'; S.sponsor=null; S.season={ wins:0, losses:0, round:0, oppIdx:null };
+  if(!rematch || !quickTeams){
+    const a=Math.floor(Math.random()*TEAMS.length); let b=Math.floor(Math.random()*(TEAMS.length-1)); if(b>=a) b++;
+    quickTeams=[a,b];
+  }
+  S.team=TEAMS[quickTeams[0]];
+  S.player=quickPlayer('You');
+  const opp=TEAMS[quickTeams[1]];
+  tipOff(()=>startGame(opp));
+}
+function startShootout(){
+  Audio8.startMusic();
+  S.mode='shootout'; S.sponsor=null; S.season={ wins:0, losses:0, round:0, oppIdx:null };
+  S.team=TEAMS[Math.floor(Math.random()*TEAMS.length)];
+  S.player=quickPlayer('You');
+  const opp=TEAMS[(TEAMS.indexOf(S.team)+1)%TEAMS.length];
+  tipOff(()=>startGame(opp, { shootout:true }));
+}
+document.getElementById('modeQuick').addEventListener('click', ()=>{ Audio8.ensureRunning(); Audio8.click(); quickPlay(false); });
+document.getElementById('modeShootout').addEventListener('click', ()=>{ Audio8.ensureRunning(); Audio8.click(); startShootout(); });
+function refreshShootoutDesc(){
+  const best=PREFS.best3pt;
+  document.getElementById('shootoutDesc').textContent = 'Five racks, sixty seconds. The last ball on each rack is worth two.' + (best!=null ? ` Best: ${best}/30.` : '');
+}
+// shared end-of-game screen for Quick Play, the contest and Versus
+let postAction = null;
+function showResult(title, html, team, label, againLabel, againFn){
+  document.querySelector('#screen-trophy h1').textContent = title;
+  document.getElementById('mvpText').style.display = 'none';
+  document.getElementById('resultBox').innerHTML = html;
+  drawTrophyArt(team, label);
+  document.getElementById('btnPostChamp').textContent = againLabel;
+  document.getElementById('btnPostMenu').style.display = '';
+  postAction = againFn;
+  showScreen('screen-trophy');
+}
+document.getElementById('btnPostMenu').addEventListener('click', ()=>{ Audio8.click(); postAction=null; goMenu(); });
+
+/* ---------------- SETTINGS ---------------- */
+function syncSettings(){
+  const cur = { qlen:String(PREFS.qlen||1), shake:PREFS.shake==='off'?'off':'on', tips:PREFS.tips==='off'?'off':'on' };
+  document.querySelectorAll('#settingsModal .seg').forEach(seg=>{
+    seg.querySelectorAll('.diffBtn').forEach(b=>b.classList.toggle('sel', b.dataset.v===cur[seg.dataset.pref]));
+  });
+}
+document.querySelectorAll('#settingsModal .seg').forEach(seg=>{
+  seg.addEventListener('click', e=>{
+    const b=e.target.closest('.diffBtn'); if(!b) return;
+    Audio8.click();
+    const k=seg.dataset.pref; PREFS[k] = k==='qlen' ? parseInt(b.dataset.v) : b.dataset.v;
+    savePrefs(); syncSettings();
+  });
+});
+document.getElementById('btnSettings').addEventListener('click', ()=>{ Audio8.click(); syncSettings(); document.getElementById('settingsModal').classList.add('open'); });
+document.getElementById('btnSettingsClose').addEventListener('click', ()=>{ Audio8.click(); document.getElementById('settingsModal').classList.remove('open'); });
+document.getElementById('btnTipsReset').addEventListener('click', ()=>{ Audio8.click(); PREFS.seen={}; PREFS.tips='on'; savePrefs(); syncSettings(); });
 
 /* ---------------- LOCAL VERSUS setup ---------------- */
 let vsP1Idx=null, vsP2Idx=null;
@@ -1216,7 +1347,7 @@ document.getElementById('btnVsStart').addEventListener('click', ()=>{
   S.player={ name:'P1', position:'Guard', heightIn:75, attrs:{shooting:6,passing:6,speed:6,defense:6}, level:1, xp:0, xpToNext:100, sp:0, badges:[],
     skinIdx:0, hairIdx:0, hairStyle:'headband', jerseyNum:1 };
   S.sponsor=null;
-  startGame();
+  tipOff(()=>startGame());
 });
 
 /* ---------------- SAVE / LOAD (manual slots in localStorage) ---------------- */
@@ -1437,11 +1568,15 @@ function developRosters(){
 }
 
 // hub + franchise menu/save buttons
+document.getElementById('btnHubReward').addEventListener('click', ()=>{
+  Audio8.click();
+  Platform.rewardedBreak(()=>{ S.player.sp+=2; S.rewardUsed=true; flash('hubMsg','+2 skill points. Thanks for watching!'); renderHub(); });
+});
 document.getElementById('btnHubSave').addEventListener('click', ()=>{ Audio8.click(); openSaveMenu(); });
 document.getElementById('btnHubMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
 document.getElementById('btnFrSave').addEventListener('click', ()=>{ Audio8.click(); openSaveMenu(); });
 document.getElementById('btnFrMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
-function goMenu(){ refreshContinue(); syncMuteButton(); showScreen('screen-mode'); }
+function goMenu(){ refreshContinue(); syncMuteButton(); refreshShootoutDesc(); showScreen('screen-mode'); }
 
 /* ---------------- Franchise: end-of-season ROOKIE DRAFT (worst picks first) ---------------- */
 let draftSel=null, draftTimer=null;
@@ -1597,6 +1732,8 @@ function renderHub(){
   const multNote = S.spMultiplierNextGame>1 ? `<br/><span class="small-txt" style="color:var(--success)">Active bonus: ${S.spMultiplierNextGame}x SP on level-ups this game.</span>` : '';
   sBox.innerHTML = `<b>Sponsor deal:</b> ${S.sponsor.text}<br/><span class="small-txt">${S.sponsor.done ? '<span style=&quot;color:var(--success)&quot;>Completed.</span> Bonus applied next game.' : 'Pending — complete it during your next game.'}</span>${multNote}`;
 
+  const rw=document.getElementById('btnHubReward');
+  rw.style.display = (Platform.name && !S.rewardUsed) ? '' : 'none';
   const grid = document.getElementById('upgradeGrid');
   grid.innerHTML='';
   attrKeys.forEach(k=>{
@@ -1648,10 +1785,12 @@ function rebuildSponsor(id, done){
 document.getElementById('btnPlayGame').addEventListener('click', ()=>{
   Audio8.ensureRunning(); Audio8.startMusic();
   Audio8.click();
-  startGame(S.season.oppIdx!=null ? TEAMS[S.season.oppIdx] : null);
+  const opp = S.season.oppIdx!=null ? TEAMS[S.season.oppIdx] : null;
+  tipOff(()=>startGame(opp));
 });
 document.getElementById('btnPostChamp').addEventListener('click', ()=>{
   Audio8.click();
+  if(postAction){ const f=postAction; postAction=null; f(); return; }
   if(S.mode==='versus'){ goMenu(); return; }
   S.season = { wins:0, losses:0, round:0, oppIdx:null };
   autoSave();
@@ -1884,21 +2023,50 @@ const WORLD_H = 720;   // total vertical world drawn (stands + floor + bench)
 const ZOOM = 540/WORLD_H;  // = 0.75, so one sprite pixel (4 world px) is exactly 3 screen pixels
 const SC = 4; // sprite pixel scale
 
-const KEYS = {};
+const KEYS = {};      // merged state the game reads
+const KB = {};        // keyboard + on-screen touch controls
+function clearKeys(){ for(const k in KB) KB[k]=false; for(const k in KEYS) KEYS[k]=false; }
 function inGame(){ return Game && !Game.over && document.getElementById('screen-game').classList.contains('active'); }
 function typingInField(e){ const t=e.target; return t && (t.tagName==='INPUT' || t.tagName==='SELECT' || t.tagName==='TEXTAREA'); }
 window.addEventListener('keydown', e=>{
   // never hijack keys while the player is typing a name / jersey number
   if(typingInField(e)) return;
-  KEYS[e.code]=true;
+  KB[e.code]=true;
   if(e.code==='KeyM' && !e.repeat){ Audio8.ensureRunning(); Audio8.toggleMute(); syncMuteButton(); }
   if((e.code==='Escape'||e.code==='KeyP') && !e.repeat && inGame()){ togglePause(); }
-  // only swallow game keys during a match (so menus still scroll / sliders still work)
-  if(inGame() && ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Slash','Period'].includes(e.code)) e.preventDefault();
+  // game keys must never scroll the page (portals embed the game in an iframe)
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown'].includes(e.code)) e.preventDefault();
+  if(inGame() && ['Slash','Period','Tab'].includes(e.code)) e.preventDefault();
 });
-window.addEventListener('keyup', e=>{ KEYS[e.code]=false; });
+window.addEventListener('keyup', e=>{ KB[e.code]=false; });
 // releasing every key when the window loses focus prevents "stuck" movement
-window.addEventListener('blur', ()=>{ for(const k in KEYS) KEYS[k]=false; });
+window.addEventListener('blur', clearKeys);
+// gamepads: pad 1 = player 1, pad 2 = player 2 in versus (standard mapping)
+const PAD_MAP = [
+  { up:'KeyW', down:'KeyS', left:'KeyA', right:'KeyD', a:'Space', x:'KeyX', b:'KeyX', y:'KeyC', sprint:'ShiftLeft', lb:'Digit2', rb:'ShiftLeft' },
+  { up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', a:'Slash', x:'Period', b:'Period', y:'ControlRight', sprint:'ShiftRight', lb:'Digit0', rb:'ShiftRight' }
+];
+let padStartWas = false;
+function pollInput(){
+  for(const k in KEYS) KEYS[k]=false;
+  for(const k in KB) if(KB[k]) KEYS[k]=true;
+  let pads=[];
+  try{ pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : []; }catch(e){}
+  let startDown=false;
+  pads.slice(0,2).forEach((g,i)=>{
+    const m=PAD_MAP[i], B=k=>g.buttons[k] && g.buttons[k].pressed, ax=g.axes[0]||0, ay=g.axes[1]||0;
+    if(ay<-0.35 || B(12)) KEYS[m.up]=true;
+    if(ay> 0.35 || B(13)) KEYS[m.down]=true;
+    if(ax<-0.35 || B(14)) KEYS[m.left]=true;
+    if(ax> 0.35 || B(15)) KEYS[m.right]=true;
+    if(B(0)) KEYS[m.a]=true; if(B(2)) KEYS[m.x]=true; if(B(1)) KEYS[m.b]=true; if(B(3)) KEYS[m.y]=true;
+    if(B(7) || B(6) || B(5)) KEYS[m.sprint]=true;
+    if(B(4)) KEYS[m.lb]=true;
+    if(B(9)) startDown=true;
+  });
+  if(startDown && !padStartWas && inGame()) togglePause();
+  padStartWas = startDown;
+}
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && inGame() && !Game.paused) togglePause(true); });
 // one-shot press detection (a held key only fires once)
 function pressed(code, store){ const down=!!KEYS[code]; const was=!!store[code]; store[code]=down; return down && !was; }
@@ -1912,8 +2080,8 @@ function pressed(code, store){ const down=!!KEYS[code]; const was=!!store[code];
   let joyId = null;
   const maxR = 44;
   function resetJoy(){
-    KEYS['KeyW']=KEYS['KeyA']=KEYS['KeyS']=KEYS['KeyD']=false;
-    KEYS['ShiftLeft']=false;
+    KB['KeyW']=KB['KeyA']=KB['KeyS']=KB['KeyD']=false;
+    KB['ShiftLeft']=false;
     joyStick.style.transform = 'translate(0px,0px)';
   }
   function updateJoy(clientX, clientY){
@@ -1925,9 +2093,9 @@ function pressed(code, store){ const down=!!KEYS[code]; const was=!!store[code];
     const sx = Math.cos(ang)*dist, sy = Math.sin(ang)*dist;
     joyStick.style.transform = `translate(${sx}px,${sy}px)`;
     const nx = sx/maxR, ny = sy/maxR;
-    KEYS['KeyA'] = nx < -0.3; KEYS['KeyD'] = nx > 0.3;
-    KEYS['KeyW'] = ny < -0.3; KEYS['KeyS'] = ny > 0.3;
-    KEYS['ShiftLeft'] = (dist/maxR) > 0.8;   // push to the edge to sprint
+    KB['KeyA'] = nx < -0.3; KB['KeyD'] = nx > 0.3;
+    KB['KeyW'] = ny < -0.3; KB['KeyS'] = ny > 0.3;
+    KB['ShiftLeft'] = (dist/maxR) > 0.8;   // push to the edge to sprint
   }
   joyBase.addEventListener('pointerdown', e=>{
     joyId = e.pointerId; joyBase.setPointerCapture(e.pointerId);
@@ -1945,10 +2113,10 @@ function pressed(code, store){ const down=!!KEYS[code]; const was=!!store[code];
   function bindTouchBtn(id, code){
     const el = document.getElementById(id);
     if(!el) return;
-    el.addEventListener('pointerdown', e=>{ KEYS[code]=true; el.classList.add('pressed'); Audio8.ensureRunning(); e.preventDefault(); });
-    el.addEventListener('pointerup', e=>{ KEYS[code]=false; el.classList.remove('pressed'); e.preventDefault(); });
-    el.addEventListener('pointercancel', ()=>{ KEYS[code]=false; el.classList.remove('pressed'); });
-    el.addEventListener('pointerleave', ()=>{ KEYS[code]=false; el.classList.remove('pressed'); });
+    el.addEventListener('pointerdown', e=>{ KB[code]=true; el.classList.add('pressed'); Audio8.ensureRunning(); e.preventDefault(); });
+    el.addEventListener('pointerup', e=>{ KB[code]=false; el.classList.remove('pressed'); e.preventDefault(); });
+    el.addEventListener('pointercancel', ()=>{ KB[code]=false; el.classList.remove('pressed'); });
+    el.addEventListener('pointerleave', ()=>{ KB[code]=false; el.classList.remove('pressed'); });
   }
   bindTouchBtn('tcShoot','Space');
   bindTouchBtn('tcPass','KeyX');
@@ -1977,7 +2145,7 @@ document.getElementById('btnQuitMenu').addEventListener('click', ()=>{
 });
 
 const ROLES = ['PG','SG','SF','PF','C'];
-const QUARTER_LEN = 60, OT_LEN = 30;
+const OT_LEN = 30;
 /* ---- ball physics: x/y are floor coordinates, h is height above the floor ---- */
 const GRAV = 900, RIM_H = 128, NET_LEN = 34, BOARD_OFF = 30;
 function clamp(v,a,b){ return v<a?a:v>b?b:v; }
@@ -2180,11 +2348,12 @@ function teamRating(team){ return team==='home' ? (Game.homeSkill||1) : (Game.aw
 // difficulty knobs only apply to the CPU opponent (never to your teammates or to Player 2)
 function cpuCfg(team, key){ if(Game.versus || team==='home' || !Game.diffCfg) return 1; return Game.diffCfg[key]; }
 
-function startGame(forcedOpponent){
+function startGame(forcedOpponent, opts){
+  opts = opts || {};
   Audio8.ensureRunning();
   // a focused menu button would otherwise be "clicked" again by the Space bar
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
-  for(const k in KEYS) KEYS[k]=false;
+  clearKeys();
   const round = Math.min(S.season.round, 2);
   const versus = S.mode==='versus';
   const franchise = S.mode==='franchise';
@@ -2260,7 +2429,7 @@ function startGame(forcedOpponent){
     camX: Math.max(0, user.x - 600),
     stamina: 100, stamina2: 100,
     special: 0, special2: 0,        // dunk/crossover charge meters
-    quarter:1, quarterTime:QUARTER_LEN, overtime:0,
+    quarter:1, quarterTime:quarterLen(), overtime:0,
     shotClock: 24,
     scoreHome:0, scoreAway:0,
     foulsHome:0, foulsAway:0,
@@ -2285,10 +2454,11 @@ function startGame(forcedOpponent){
     lastMoveDirX:0, ankleApplied:false, dirChangeTimer:0,
     shakeT:0, shakeMag:0, shakeDur:0, userStreak:0
   };
+  if(opts.shootout) setupShootout();
   Game.loopId = (startGame._loop = (startGame._loop||0)+1);
   // swallow the Space press that may still be held from the menu click
   Game.keys1.Space = true; Game.keys2.Slash = true;
-  attachBall(user);
+  if(!Game.shootout) attachBall(user);
   buildCourtCache();
   document.getElementById('pauseOverlay').style.display='none';
   showScreen('screen-game');
@@ -2348,6 +2518,95 @@ function clampP(p, allowOOB){
   p.y = Math.max(COURT.inTop, Math.min(COURT.inBottom, p.y));
 }
 
+/* ---------------- 3-POINT CONTEST ---------------- */
+const SO_ANGLES = [-24,-12,0,12,24];
+function setupShootout(){
+  const u=Game.user, hx=COURT.hoopRightX;
+  Game.home=[u]; Game.away=[]; Game.all=[u];
+  Game.quarterTime=60; Game.quarter=1;
+  const spots = SO_ANGLES.map(a=>{ const r=a*Math.PI/180; return { x:hx-352*Math.cos(r), y:COURT.hoopY+352*Math.sin(r) }; });
+  Game.shootout = { spots, rack:0, ball:0, score:0, next:0.9, moving:0, inPlay:false, results:[], done:false };
+  u.x=spots[0].x; u.y=spots[0].y; u.facing=1; u.hasBall=false;
+  const b=Game.ball; b.holder=null; b.dead=true; b.loose=false; b.x=u.x-30; b.y=u.y+20; b.h=6;
+  Game.banner={ text:'3-POINT CONTEST', t:1.6 };
+}
+function soRackPos(i){ const s=Game.shootout.spots[i]; return { x:s.x-34, y:s.y+22 }; }
+function updateShootout(dt){
+  const so=Game.shootout, u=Game.user, b=Game.ball;
+  if(so.done) return;
+  if(Game.quarterTime>0) Game.quarterTime-=dt;
+  if(Game.quarterTime<=0 && !b.inAir && !u.hasBall){ so.done=true; endGame(); return; }
+  if(Game.quarterTime<=0 && u.hasBall && !Game.shotMeter.active){ so.done=true; endGame(); return; }
+  if(so.moving>0){
+    // jog to the next rack
+    const t=so.spots[so.rack];
+    so.moving-=dt;
+    const dx=t.x-u.x, dy=t.y-u.y, d=Math.hypot(dx,dy);
+    if(d>3){ const st=Math.min(d, 330*dt); u.x+=dx/d*st; u.y+=dy/d*st; u.moving=true; u.speedFrac=0.7; u.animT+=dt*12; u.facing=dx>=0?1:-1; }
+    if(so.moving<=0 || d<=3){ so.moving=0; u.x=t.x; u.y=t.y; u.moving=false; u.facing=1; so.next=0.15; }
+    return;
+  }
+  if(!u.hasBall && !b.inAir && !so.inPlay && so.next>0){
+    so.next-=dt;
+    if(so.next<=0){
+      if(so.ball>=5){
+        so.rack++; so.ball=0;
+        if(so.rack>=5){ so.done=true; endGame(); return; }
+        so.moving=0.9; return;
+      }
+      // pick up the next ball off the rack
+      const r=soRackPos(so.rack);
+      b.x=r.x; b.y=r.y; b.h=24; b.money = so.ball===4;
+      so.inPlay=true;
+      attachBall(u, true);
+    }
+  }
+}
+function shootoutResolve(){
+  const b=Game.ball, so=Game.shootout, side=sideOf(b.hoopX);
+  const pts = b.money ? 2 : 1;
+  if(b.made){
+    so.score+=pts; so.results.push(b.money?'M':'m');
+    Audio8.swish(); Audio8.cheer(b.money);
+    Game.net[side]=0.55;
+    addFloat(b.hoopX, COURT.hoopY-RIM_H-30, `+${pts}`, b.money?'#e5534b':'#ffd166', 20);
+    b.inAir=false; b.loose=false; b.dead=true; b.netDrop=0.22; b.x=b.hoopX; b.y=COURT.hoopY; b.h=RIM_H;
+  } else {
+    so.results.push('x');
+    if(b.airball){ freeBall(b.vx*0.85, b.vy*0.85, b.vh, true); addFloat(b.x, b.y-90, "AIRBALL", '#f87171', 16); }
+    else rimBounce(b.missKind||'front', true);
+  }
+  so.ball++; so.inPlay=false; so.next=0.35;
+}
+function drawShootoutRacks(){
+  const so=Game.shootout;
+  so.spots.forEach((sp,i)=>{
+    const r=soRackPos(i);
+    P(r.x-30, r.y-16, 60, 5, '#2b2e35'); P(r.x-28, r.y-11, 4, 12, '#2b2e35'); P(r.x+24, r.y-11, 4, 12, '#2b2e35');
+    let left = i<so.rack ? 0 : i===so.rack ? 5-so.ball-(so.inPlay?1:0) : 5;
+    for(let k=0;k<left;k++){
+      const idx = 5-left+k, money = idx===4;
+      ctx.drawImage((money?BALL_FRAMES_MONEY:BALL_FRAMES)[0], Math.round(r.x-28+k*11), r.y-30, 13, 13);
+    }
+  });
+}
+function drawShootoutHud(){
+  const so=Game.shootout, W=canvas.width, cx=W/2, y=8, bw=360, bx=Math.round(cx-bw/2), bh=40;
+  P(bx-2, y-2, bw+4, bh+4, '#000000'); P(bx, y, bw, bh, '#111318');
+  P(bx, y, 10, bh, Game.teamHome.primary);
+  pxText('SCORE', bx+22, y+6, 2, '#8d8f96');
+  pxText(String(so.score), bx+22, y+18, 4, '#ffffff');
+  pxText('RACK '+Math.min(5,so.rack+1)+'/5', cx, y+6, 2, '#f2c14e', 'center');
+  pxText(fmtClock(Game.quarterTime), bx+bw-14, y+12, 4, Game.quarterTime<10?'#e5534b':'#ecebe6', 'right');
+  // shot chart: 5 racks x 5 balls
+  for(let r=0;r<5;r++) for(let k=0;k<5;k++){
+    const res = so.results[r*5+k];
+    const col = res==='m'?'#5cc177':res==='M'?'#f2c14e':res==='x'?'#e5534b':'#2b2e35';
+    P(cx-62+r*26+k*5, y+22, 4, 8, col);
+  }
+  const best=PREFS.best3pt; if(best!=null) pxText('BEST '+best, bx+66, y+6, 2, '#5d6068');
+}
+
 /* ---------------- game loop ---------------- */
 function gameLoop(now, id){
   if(!Game || Game.over || id!==Game.loopId) return;   // only one loop ever runs
@@ -2361,9 +2620,15 @@ function gameLoop(now, id){
 }
 
 function update(dt){
+  pollInput();
   if(Game.paused) return;   // frozen while the pause menu is open
   Game.time += dt;
   if(Game.banner){ Game.banner.t-=dt; if(Game.banner.t<=0) Game.banner=null; }
+  if(Game.shootout){
+    updateInput(dt); trackVel(dt); updateBall(dt); updateShootout(dt);
+    updateCamera(dt); updateFx(dt); updateTips(dt); updateShotPopup(dt);
+    return;
+  }
   // free throws freeze normal play
   if(Game.freeThrow){ updateFreeThrow(dt); updateFx(dt); updateCamera(dt); return; }
   // short dead-ball pause at the end of a quarter
@@ -2381,6 +2646,7 @@ function update(dt){
   updateDead(dt);
   updateCamera(dt);
   updateFx(dt);
+  updateTips(dt);
   updateShotPopup(dt);
   updatePlaybook(dt);
   updateShotClock(dt);
@@ -2466,7 +2732,7 @@ function updateClock(dt){
 // start the next quarter / overtime: reset fouls, alternate possession with a baseline inbound
 function startPeriod(){
   Game.quarter++;
-  Game.quarterTime = Game.quarter>4 ? OT_LEN : QUARTER_LEN;
+  Game.quarterTime = Game.quarter>4 ? OT_LEN : quarterLen();
   Game.foulsHome=0; Game.foulsAway=0;
   Game.shotMeter.active=false; Game.shotMeter2.active=false;
   // alternating possession: away inbounds Q2/Q4, home Q3, OT alternates
@@ -2504,6 +2770,7 @@ function updateInput(dt){
   if(KEYS['KeyW']||(arrows&&KEYS['ArrowUp'])) dy-=1;
   if(KEYS['KeyS']||(arrows&&KEYS['ArrowDown'])) dy+=1;
 
+  if(Game.shootout){ dx=0; dy=0; }
   // you can't run while gathering for a jump shot
   const gathering = Game.shotMeter.active;
   user.moving = (dx!==0||dy!==0) && !gathering;
@@ -2640,6 +2907,7 @@ function chargeSpecial(who, amt){
   else Game.special2=Math.min(100,Game.special2+amt);
 }
 function useSpecial(u, who){
+  if(Game.shootout) return;
   const meter = who===1 ? Game.special : Game.special2;
   if(meter < 100) { addFloat(u.x,u.y-90,`CHARGING ${Math.floor(meter)}%`,'#8fa0b8',13); return; }
   if(Game.phase!=='live' && u.hasBall) return;
@@ -2680,6 +2948,7 @@ function useSpecial(u, who){
 
 /* ---------------- playbooks (reposition your AI teammates) ---------------- */
 function callPlaybook(kind){
+  if(Game.shootout) return;
   Game.playbook={ kind, team:Game.ball.holder?Game.ball.holder.team:'home' };
   Game.playbookTimer=4;
   const label = kind==='iso'?'ISO — clear out!' : kind==='pnr'?'PICK & ROLL!' : 'FAST BREAK!';
@@ -3070,6 +3339,7 @@ function updateBall(dt){
 
 function resolveShot(){
   const b = Game.ball;
+  if(Game.shootout){ shootoutResolve(); return; }
   const shooter = b.shooter;
   const fouled = b.fouled;
   b.fouled = false;
@@ -3537,6 +3807,7 @@ function updateCamera(dt){
   if(Game.shakeT>0) Game.shakeT = Math.max(0, Game.shakeT-dt);
 }
 function screenShake(mag, dur){
+  if(PREFS.shake==='off') return;
   Game.shakeT = dur||0.28;
   Game.shakeMag = mag||6;
   Game.shakeDur = Game.shakeT;
@@ -4017,16 +4288,19 @@ const BALL_SPR_B = [
 ".OBbBBbO.",
 "..OOOOO..",
 ];
-const BALL_FRAMES = (function(){
+function buildBallFrames(pal, hi){
   const flip = g=>g.map(r=>r.split('').reverse().join(''));
   return [BALL_SPR, BALL_SPR_B, flip(BALL_SPR), flip(BALL_SPR_B)].map(grid=>{
     const cv=document.createElement('canvas'); cv.width=9; cv.height=9;
     const c=cv.getContext('2d');
-    grid.forEach((row,r)=>row.split('').forEach((ch,k)=>{ if(ch==='.') return; c.fillStyle=BALL_PAL[ch]; c.fillRect(k,r,1,1); }));
-    c.fillStyle='#f6a35f'; c.fillRect(2,2,2,1); c.fillRect(2,3,1,1);   // highlight
+    grid.forEach((row,r)=>row.split('').forEach((ch,k)=>{ if(ch==='.') return; c.fillStyle=pal[ch]; c.fillRect(k,r,1,1); }));
+    c.fillStyle=hi; c.fillRect(2,2,2,1); c.fillRect(2,3,1,1);   // highlight
     return cv;
   });
-})();
+}
+const BALL_FRAMES = buildBallFrames(BALL_PAL, '#f6a35f');
+// red-white-blue "money ball" for the 3-point contest
+const BALL_FRAMES_MONEY = buildBallFrames({ O:'#241c12', B:'#e5534b', b:'#2f5fb8' }, '#ffffff');
 function drawBallSpr(){
   const b=Game.ball;
   const sc = 3.2;
@@ -4034,7 +4308,8 @@ function drawBallSpr(){
   // shadow on the floor: smaller and fainter the higher the ball is
   const k = 1/(1+Math.max(0,b.h)/140);
   pixelEllipse(b.x, b.y, Math.max(3,Math.round(10*k)), 3, 'rgba(20,12,4,'+(0.3*k).toFixed(2)+')');
-  const frame = BALL_FRAMES[Math.floor(Math.abs(b.spin||0))%4];
+  const frames = (Game.shootout && b.money) ? BALL_FRAMES_MONEY : BALL_FRAMES;
+  const frame = frames[Math.floor(Math.abs(b.spin||0))%4];
   ctx.drawImage(frame, Math.round(b.x - sz/2), Math.round(b.y - b.h - sz/2), sz, sz);
 }
 function drawParticles(){
@@ -4067,6 +4342,7 @@ function render(){
   ctx.scale(ZOOM, ZOOM);
   ctx.translate(-Game.camXr, 0);
   if(courtCache) ctx.drawImage(courtCache, -40, 0);
+  if(Game.shootout) drawShootoutRacks();
 
   // depth-sort players, the free ball and the two rims/nets by floor y
   const b = Game.ball;
@@ -4081,14 +4357,15 @@ function render(){
   }
   drawParticles();
   ctx.restore();
+  if(Game.promo) return;          // debug-only: clean frame for store art
 
   // ---- screen-space overlays (crisp pixel font) ----
   drawLabels();
   drawFloats();
   drawOffscreenMarker(Game.user, '#5cc177');
   if(Game.versus) drawOffscreenMarker(Game.user2, '#4fb3d9');
-  drawScoreboard();
-  drawMeters();
+  if(Game.shootout) drawShootoutHud(); else { drawScoreboard(); drawMeters(); }
+  drawTip();
   if(Game.shotMeter.active) drawMeter(Game.shotMeter, Game.user);
   if(Game.versus && Game.shotMeter2.active) drawMeter(Game.shotMeter2, Game.user2);
   if(Game.shotPopup) drawPopup(Game.shotPopup, Game.versus ? canvas.width*0.25 : canvas.width/2);
@@ -4105,9 +4382,43 @@ function drawLabels(){
     if(l.arrow){ ctx.fillStyle=l.col; for(let i=0;i<4;i++) ctx.fillRect(Math.round(s.x)-4+i, ty-10+i*2, 8-i*2, 2); }
   }
 }
+const TIPS = {
+  move:    ['MOVE WITH WASD.  HOLD SHIFT TO SPRINT', 'DRAG THE STICK TO MOVE.  PUSH TO THE EDGE TO SPRINT'],
+  shoot:   ['HOLD SPACE, LET GO WHEN THE MARKER HITS THE GREEN', 'HOLD SHOOT, LET GO WHEN THE MARKER HITS THE GREEN'],
+  pass:    ['X PASSES.  WITHOUT THE BALL, X CALLS FOR IT', 'PASS MOVES THE BALL.  WITHOUT IT, PASS CALLS FOR IT'],
+  defense: ['ON DEFENSE: X TO STEAL, SPACE TO JUMP AND BLOCK', 'ON DEFENSE: PASS TO STEAL, SHOOT TO JUMP AND BLOCK'],
+  special: ['SPECIAL READY!  PRESS C NEAR THE RIM TO DUNK', 'SPECIAL READY!  TAP SPECIAL NEAR THE RIM TO DUNK'],
+  contest: ['HOLD SPACE AND RELEASE IN THE GREEN.  MONEY BALLS = 2', 'HOLD SHOOT AND RELEASE IN THE GREEN.  MONEY BALLS = 2']
+};
+function showTip(key){
+  if(PREFS.tips==='off' || Game.versus) return;
+  PREFS.seen = PREFS.seen || {};
+  if(PREFS.seen[key] || (Game.tip && Game.tip.t>0)) return;
+  PREFS.seen[key]=1; savePrefs();
+  Game.tip = { text:TIPS[key][IS_TOUCH?1:0], t:5.5 };
+}
+function updateTips(dt){
+  if(Game.tip){ Game.tip.t-=dt; if(Game.tip.t<=0) Game.tip=null; }
+  const u=Game.user, b=Game.ball;
+  if(Game.shootout){ if(Game.time>1.5) showTip('contest'); return; }
+  if(Game.time>1.5) showTip('move');
+  if(u.hasBall && Game.time>5) showTip('shoot');
+  if(Game.stats.fga>0 && u.hasBall) showTip('pass');
+  if(b.holder && b.holder.team==='away' && Game.time>8) showTip('defense');
+  if(Game.special>=100) showTip('special');
+}
+function drawTip(){
+  const tp=Game.tip; if(!tp) return;
+  const a=Math.min(1, tp.t*2, (5.5-tp.t)*4);
+  const W=canvas.width, w=textW(tp.text,2)+32, x=Math.round(W/2-w/2), y=canvas.height-(IS_TOUCH?170:120);
+  ctx.save(); ctx.globalAlpha=Math.max(0,a);
+  P(x-2, y-2, w+4, 32, '#000000'); P(x, y, w, 28, '#111318'); P(x, y, 4, 28, '#4fb3d9');
+  pxText(tp.text, W/2+2, y+9, 2, '#ecebe6', 'center');
+  ctx.restore();
+}
 function drawControlsHint(){
-  if(IS_TOUCH) return;
-  if((Game.time||0) > 12) return;            // only for the opening seconds; full list is on the pause screen
+  if(IS_TOUCH || Game.shootout) return;
+  if((Game.time||0) > 12 || Game.tip) return;  // only for the opening seconds; full list is on the pause screen
   const y = canvas.height-14, dim='rgba(236,235,230,0.65)';
   if(Game.versus){
     pxText('P1  WASD MOVE  LSHIFT SPRINT  SPACE SHOOT  X PASS  C SPECIAL', 12, y-12, 2, dim);
@@ -4253,7 +4564,7 @@ function drawFreeThrow(){
 function boxScoreHTML(won){
   const st=Game.stats;
   const pct=(m,a)=>a?` (${Math.round(m/a*100)}%)`:'';
-  return `<div class="boxScore"><b>${won?'WIN':'LOSS'}</b> · ${Game.teamHome.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}<br/>
+  return `<div class="boxScore"><b>${won?'WIN':'LOSS'}</b> · ${Game.teamHome.abbr} ${Game.scoreHome} - ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}<br/>
     ${S.player.name}: <b>${st.points}</b> PTS · ${st.rebounds} REB · ${st.assists} AST · ${st.steals} STL · ${st.blocks} BLK · ${st.to} TO<br/>
     FG ${st.fgm}/${st.fga}${pct(st.fgm,st.fga)} · 3PT ${st.tpm}/${st.tpa} · FT ${st.ftm}/${st.fta}</div>`;
 }
@@ -4262,19 +4573,32 @@ function endGame(){
   Game.over=true;
   Platform.gameplayStop();
   Audio8.buzzer();
-  for(const k in KEYS) KEYS[k]=false;
+  clearKeys();
   const won = Game.scoreHome > Game.scoreAway;
 
-  // LOCAL VERSUS: show a winner banner then back to the menu
+  S.rewardUsed=false;
+  if(Game.shootout){
+    const so=Game.shootout, best=PREFS.best3pt, isBest = best==null || so.score>best;
+    if(isBest){ PREFS.best3pt=so.score; savePrefs(); Platform.happyTime(); }
+    const made=so.results.filter(r=>r!=='x').length;
+    Audio8.badge();
+    showResult('3-Point Contest',
+      `<div class="boxScore"><b>${so.score}</b> points of 30 · ${made}/${so.results.length} makes${isBest?' · <b>New best!</b>':` · Best ${best}`}</div>`,
+      Game.teamHome, String(so.score), 'Try Again', startShootout);
+    return;
+  }
+  if(S.mode==='quick'){
+    if(won){ Audio8.badge(); Platform.happyTime(); }
+    showResult(won?'You win':'You lose', boxScoreHTML(won), won?Game.teamHome:Game.teamAway, won?'WIN':'FINAL', 'Play Again', ()=>quickPlay(true));
+    return;
+  }
+  // LOCAL VERSUS: winner screen with a rematch
   if(S.mode==='versus'){
     const p1win = won;
-    document.getElementById('mvpText').textContent =
-      `${p1win?'Player 1':'Player 2'} wins! Final: ${Game.teamHome.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}.`;
-    document.querySelector('#screen-trophy h1').textContent = p1win?'Player 1 wins':'Player 2 wins';
-    document.getElementById('btnPostChamp').textContent='Back to Menu';
     Audio8.badge();
-    drawTrophyArt(p1win?Game.teamHome:Game.teamAway, 'WIN');
-    showScreen('screen-trophy');
+    showResult(p1win?'Player 1 wins':'Player 2 wins',
+      `<div class="boxScore"><b>Final</b> · ${Game.teamHome.abbr} ${Game.scoreHome} - ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}</div>`,
+      p1win?Game.teamHome:Game.teamAway, 'WIN', 'Rematch', ()=>tipOff(()=>startGame()));
     return;
   }
 
@@ -4349,6 +4673,11 @@ function drawTrophyArt(team, label){
 }
 
 function showTrophy(){
+  postAction=null;
+  document.getElementById('mvpText').style.display='';
+  document.getElementById('resultBox').innerHTML='';
+  document.getElementById('btnPostMenu').style.display='none';
+  Platform.happyTime();
   showScreen('screen-trophy');
   document.querySelector('#screen-trophy h1').textContent = 'Finals MVP';
   document.getElementById('btnPostChamp').textContent = 'Continue My Journey';
@@ -4384,8 +4713,18 @@ function renderCourtPicker(){
   });
 }
 setTimeout(renderCourtPicker, 0);
+refreshShootoutDesc();
+Platform.init().then(()=>Platform.loadingDone());
+// phones: the game needs landscape — pause and ask to rotate
+function checkOrientation(){
+  const portrait = IS_TOUCH && window.innerHeight > window.innerWidth;
+  document.body.classList.toggle('portrait', portrait);
+  if(portrait && inGame() && !Game.paused) togglePause(true);
+}
+window.addEventListener('resize', checkOrientation);
+checkOrientation();
 // debug handle for automated tests (read-only use)
-if(/[?&#]debug/.test(location.href)) window.__HL = { get Game(){ return Game; }, get S(){ return S; }, KEYS, PREFS, shoot:(p,t)=>releaseShot(p,t),
+if(/[?&#]debug/.test(location.href)) window.__HL = { get Game(){ return Game; }, get S(){ return S; }, KEYS, KB, PREFS, shoot:(p,t)=>releaseShot(p,t),
   tick(n){ for(let i=0;i<n && Game && !Game.over;i++) update(1/60); if(Game && !Game.over) render(); } };
 })();
 </script>

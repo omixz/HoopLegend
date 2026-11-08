@@ -1,57 +1,79 @@
-# Hoop Legends — Web publishing (itch.io / Poki / CrazyGames)
+# Hoop Legends — publishing to web portals
 
-The whole game is one self-contained file: `../basketball-rpg.html`. No build
-step, no external assets, no network calls — which is exactly what web game
-portals want.
+The whole game is one self-contained file, `../basketball-rpg.html`: no build
+step, no assets to host, no network calls. Portals just need it as `index.html`.
 
-## itch.io (HTML5) — works today, zero code changes
+## Build the upload packages
 
-1. Copy the game in as `index.html`:
-   ```
-   ./make-itch-build.sh        # produces web/build/index.html + hoop-legends-web.zip
-   ```
-2. On itch.io: **Upload files → hoop-legends-web.zip**, tick **"This file will be
-   played in the browser"**, and set the embed size to **1000 × 640** (or larger;
-   the canvas is 960×540 and scales).
-3. Recommended itch settings: Kind of project = **HTML**, enable **Fullscreen
-   button**, mobile-friendly is optional (game is keyboard-based).
+```
+./make-portal-build.sh
+```
 
-## Poki / CrazyGames — SDK hooks are already wired
+Produces (in `web/dist/`, git-ignored):
 
-The game calls a small `Platform` shim (`gameplayStart`, `gameplayStop`,
-`commercialBreak`) that **no-ops unless the portal SDK is present**. To go live
-on a portal, add their SDK `<script>` in the `<head>` of `index.html`:
+| Package | What's inside | Upload to |
+|---|---|---|
+| `hoop-legends-itch.zip` | plain `index.html` | itch.io ("played in the browser") |
+| `hoop-legends-poki.zip` | `index.html` + Poki SDK v2 script tag | Poki for Developers |
+| `hoop-legends-crazygames.zip` | `index.html` + CrazyGames SDK v3 script tag | CrazyGames Developer Portal |
 
-- **Poki**: add `<script src="//game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>`.
-  The shim will then call `PokiSDK.init()`, `gameplayStart()`, `gameplayStop()`,
-  and `commercialBreak()` automatically.
-- **CrazyGames**: add `<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>`.
-  The shim calls `window.CrazyGames.SDK.init()`, `game.gameplayStart/Stop()`,
-  and `ad.requestAd('midgame', …)`.
+Store art is in `web/assets/`: `cover-1280x720.png`, `thumb-512x512.png`,
+`icon-256x256.png` and three 1280x720 screenshots (Pro Arena, Blacktop, Beach).
 
-Both portals require: no external network requests (already true), the game
-pauses during ad breaks (the pause system handles this), and gameplay
-start/stop events around active play (already fired in `startGame` / `endGame`
-/ pause).
+## What the game already does for portals
 
-### Where ad breaks fire
-`Platform.commercialBreak(done)` is available to gate a game behind a portal ad.
-It always runs `done()` even with no SDK, so hooking it into the "Tip Off"
-buttons is safe. It's intentionally left un-forced so you can decide ad
-frequency per portal policy (Poki disallows ads too frequently).
+The `Platform` shim in the game detects whichever SDK is on the page and is a
+no-op when none is, so one source file works everywhere.
 
-## Mobile / touch (Poki mobile web, phones)
+- **Loading**: `PokiSDK.init()` → `gameLoadingFinished()`; on CrazyGames
+  `SDK.init()` → `game.loadingStart()` / `loadingStop()`.
+- **Gameplay events**: `gameplayStart()` when a game tips off or resumes from
+  pause; `gameplayStop()` on pause, tab hidden, quit, ad break and game end.
+  Calls are de-duplicated so the SDK never sees two starts in a row.
+- **Ad breaks**: a `commercialBreak()` / `requestAd('midgame')` runs before every
+  tip-off except the very first one of the session (natural break between games;
+  the portals rate-limit on top of that).
+- **Rewarded ads**: in My Journey the hub shows "Watch ad: +2 SP" (once per game)
+  only when a portal SDK is present. The reward is only granted when the SDK
+  reports the ad completed.
+- **Audio**: all sound (music + effects) is muted while an ad plays, separately
+  from the player's own mute setting.
+- **Happy time** (CrazyGames): fired on a title, a Quick Play win and a new
+  3-Point Contest best.
+- **No `prompt()` / `alert()`**: saves use an in-page slot picker.
+- **No page scrolling** from Space / arrow keys inside the iframe.
+- **Mobile**: on-screen joystick + Shoot / Pass / Special appear on touch
+  devices; in portrait the game pauses and asks the player to rotate.
+- **Persistence**: `localStorage` only, wrapped in try/catch so blocked storage
+  never breaks the game.
 
-The game auto-detects touch/coarse-pointer devices (`@media (hover:none) and
-(pointer:coarse)`) and shows an on-screen virtual joystick (bottom-left) plus
-Shoot / Pass / Special buttons (bottom-right) overlaid on the canvas — no
-separate build needed. They drive the same input state the keyboard does, so
-desktop and mobile share one code path. The canvas itself is already
-responsive (`max-width:100vw; max-height:100vh`), so it fits phone screens.
-Local 2-player versus mode is keyboard-only and is best kept to desktop.
+Tested with a mock Poki SDK: the call order is
+`init → gameLoadingFinished → gameplayStart → … → gameplayStop → commercialBreak → gameplayStart`.
+
+## Submitting
+
+**Poki** (poki.com/developers): Poki reviews every game before release and
+needs your developer account. Create a game in Poki for Developers, upload
+`hoop-legends-poki.zip`, and use their QA tool (Poki Inspector) to check the SDK
+events. Suggested listing:
+- Title: *Hoop Legends*
+- Category: Sports / Basketball
+- Controls: WASD / arrows move, Shift sprint, Space shoot (hold and release),
+  X pass / steal, C special, Esc pause. Touch and gamepad supported.
+- Orientation: landscape. Embed size 960x540 (16:9; the canvas scales).
+
+**CrazyGames** (developer.crazygames.com): upload `hoop-legends-crazygames.zip`
+as an HTML5 game, 16:9. Their QA runs the SDK in "local" mode first. The
+implementation follows their v3 requirements: no midgame ad before the first
+game, gameplay start/stop, audio muted during ads.
+
+**itch.io**: upload `hoop-legends-itch.zip`, kind of project *HTML*, tick
+"This file will be played in the browser", embed size 1280x720, enable the
+fullscreen button and "Mobile friendly" (landscape).
 
 ## Notes
-- Keyboard controls are listed on the in-game HUD; portals accept keyboard
-  games, and this one now also works with touch on phones (see above).
-- Everything (art, music, names, teams) is original — safe for commercial
-  distribution.
+
+- All art, music, team names and players are original, so the game is safe for
+  commercial distribution.
+- `?debug` in the URL exposes a read-only test hook (`window.__HL`) used by the
+  automated tests. It is inert unless that query string is present.
