@@ -136,7 +136,7 @@
   .menuItem{
     display:flex; align-items:center; gap:14px; width:100%; text-align:left;
     background:var(--bg-panel2); color:var(--text); box-shadow:none; border:1px solid var(--border);
-    padding:12px 16px; text-transform:none; letter-spacing:0; font-weight:400;
+    padding:9px 16px; text-transform:none; letter-spacing:0; font-weight:400;
   }
   .menuItem:hover{ background:#22252c; border-color:var(--accent); }
   .menuItem:active{ transform:translateX(2px); box-shadow:none; }
@@ -157,6 +157,34 @@
   .courtBtn:hover{ background:#22252c; }
   .courtBtn:active{ transform:none; }
   .randomThumb{ width:84px; height:48px; display:flex; align-items:center; justify-content:center; background:#000; font-size:22px; color:var(--text-dim); }
+  .brandRight{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .coinPill{ display:inline-flex; align-items:center; gap:7px; font-family:var(--display); font-weight:800; font-size:18px; color:var(--accent-soft); background:var(--bg-panel2); border:1px solid var(--border); padding:4px 10px 4px 8px; border-radius:3px; }
+  .coinPill::before{ content:''; width:12px; height:12px; background:var(--accent-soft); box-shadow:inset -3px -3px 0 #b58a1f; }
+  .dailyBox{ margin-top:14px; background:var(--bg-panel2); border:1px solid var(--border); padding:10px 14px; }
+  .dailyHead{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .dailyItem{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); padding:3px 0; }
+  .dailyItem .chk{ width:14px; height:14px; border:2px solid var(--text-dim); flex-shrink:0; }
+  .dailyItem.done{ color:var(--text-dim); text-decoration:line-through; }
+  .dailyItem.done .chk{ background:var(--success); border-color:var(--success); }
+  .lockerHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .lockerGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-top:14px; }
+  .lockCard{ background:var(--bg-panel2); border:1px solid var(--border); padding:10px; display:flex; flex-direction:column; gap:6px; }
+  .lockCard.eq{ border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+  .lockCard canvas{ image-rendering:pixelated; background:#0d0f13; align-self:center; }
+  .lockCard .lcName{ font-family:var(--display); font-weight:800; font-size:17px; text-transform:uppercase; }
+  .lockCard .lcTag{ font-size:11px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; }
+  .lockCard .lcStats{ font-size:12px; color:var(--text-dim); line-height:1.5; }
+  .lockCard button{ margin-top:auto; }
+  .bracket{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:16px 0 4px; text-align:left; }
+  .bCol h3{ font-family:var(--display); font-size:13px; letter-spacing:2px; color:var(--text-dim); margin:0 0 8px; text-transform:uppercase; }
+  .bMatch{ background:var(--bg-panel2); border:1px solid var(--border); margin-bottom:10px; }
+  .bTeam{ display:flex; align-items:center; gap:8px; padding:6px 8px; font-size:13px; color:var(--text); }
+  .bTeam + .bTeam{ border-top:1px solid var(--border); }
+  .bTeam .sw{ width:10px; height:10px; flex-shrink:0; }
+  .bTeam.lost{ color:#5d6068; text-decoration:line-through; }
+  .bTeam.me{ font-weight:700; color:var(--accent); }
+  .bTeam.tbd{ color:#5d6068; }
+  @media (max-width:560px){ .bracket{ grid-template-columns:1fr; } .brandRight{ margin-left:0; } .brand{ flex-wrap:wrap; } }
   .menuFoot{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
   .menuFoot .small-txt{ margin-left:auto; }
 
@@ -197,15 +225,25 @@
         <canvas id="logoBall" width="9" height="9"></canvas>
         <div><div class="brandName">HOOP <span>LEGENDS</span></div>
         <div class="brandSub">Career · Franchise · Head-to-head</div></div>
+        <div class="brandRight"><span class="coinPill" id="menuCoins">0</span><button id="btnLocker" class="small">Locker</button></div>
       </div>
       <div class="menuList">
         <button class="menuItem" id="modeQuick"><span class="miNum">01</span><span class="miBody"><span class="miTitle">Quick Play</span><span class="miDesc">Jump straight into a game against the CPU. No setup.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeJourney"><span class="miNum">02</span><span class="miBody"><span class="miTitle">My Journey</span><span class="miDesc">Build one player, level up and carry your team through a three-round playoff run.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeFranchise"><span class="miNum">03</span><span class="miBody"><span class="miTitle">Franchise</span><span class="miDesc">Run a whole team: a 12-game season, trades, playoffs and the rookie draft.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeShootout"><span class="miNum">04</span><span class="miBody"><span class="miTitle">3-Point Contest</span><span class="miDesc" id="shootoutDesc">Five racks, sixty seconds. The last ball on each rack is worth two.</span></span><span class="miArrow">&rsaquo;</span></button>
-        <button class="menuItem" id="modeVersus"><span class="miNum">05</span><span class="miBody"><span class="miTitle">Local Versus</span><span class="miDesc">Two players on one keyboard. Pick both teams and play it out.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeTourney"><span class="miNum">02</span><span class="miBody"><span class="miTitle">Tournament</span><span class="miDesc">Eight teams, single elimination. Lose once and you're out.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeJourney"><span class="miNum">03</span><span class="miBody"><span class="miTitle">My Journey</span><span class="miDesc">Build one player, level up and carry your team through a three-round playoff run.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeFranchise"><span class="miNum">04</span><span class="miBody"><span class="miTitle">Franchise</span><span class="miDesc">Run a whole team: a 12-game season, trades, playoffs and the rookie draft.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeShootout"><span class="miNum">05</span><span class="miBody"><span class="miTitle">3-Point Contest</span><span class="miDesc" id="shootoutDesc">Five racks, sixty seconds. The last ball on each rack is worth two.</span></span><span class="miArrow">&rsaquo;</span></button>
+        <button class="menuItem" id="modeVersus"><span class="miNum">06</span><span class="miBody"><span class="miTitle">Local Versus</span><span class="miDesc">Two players on one keyboard. Pick both teams and play it out.</span></span><span class="miArrow">&rsaquo;</span></button>
+      </div>
+      <div class="dailyBox">
+        <div class="dailyHead"><span class="optLabel">Daily challenges</span><span class="small-txt">+75 coins each · new set every day</span></div>
+        <div id="dailyList"></div>
       </div>
       <div class="optGrid">
+        <div class="optLabel">Format</div>
+        <div><div class="seg" id="formatRow">
+          <button class="diffBtn" data-f="1">1 v 1</button><button class="diffBtn" data-f="3">3 v 3</button><button class="diffBtn" data-f="5">5 v 5</button>
+        </div> <span class="small-txt">&nbsp;Quick Play, Tournament, Versus</span></div>
         <div class="optLabel">Difficulty</div>
         <div><div class="seg" id="diffRow">
           <button class="diffBtn" data-d="easy">Easy</button><button class="diffBtn sel" data-d="medium">Medium</button><button class="diffBtn" data-d="hard">Hard</button>
@@ -220,6 +258,34 @@
         <button id="btnSettings" class="small ghost">Settings</button>
         <span class="small-txt">Progress auto-saves after every game.</span>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ LOCKER ============ -->
+  <div id="screen-locker" class="screen">
+    <div class="panel" style="max-width:780px;text-align:left;">
+      <div class="lockerHead"><h1 style="margin:0">Locker</h1><span class="coinPill" id="lockerCoins">0</span></div>
+      <p class="small-txt" style="margin:6px 0 14px">Earn coins in every mode: wins, points, steals, blocks, contest makes and daily challenges. Everything is unlocked by playing.</p>
+      <div class="seg" id="lockerTabs"><button class="diffBtn sel" data-t="stars">Players</button><button class="diffBtn" data-t="balls">Balls</button><button class="diffBtn" data-t="shoes">Shoes</button></div>
+      <p class="small-txt" id="lockerNote" style="margin:10px 0 0"></p>
+      <div id="lockerGrid" class="lockerGrid"></div>
+      <div class="flashMsg" id="lockerMsg"></div>
+      <div class="row" style="justify-content:flex-start"><button id="btnLockerBack" class="ghost">Back</button></div>
+    </div>
+  </div>
+
+  <!-- ============ TOURNAMENT ============ -->
+  <div id="screen-tourney" class="screen">
+    <div class="panel" style="max-width:820px;">
+      <h1 id="tTitle">Tournament</h1>
+      <p class="story" id="tStatus"></p>
+      <div id="tPick">
+        <h2>Pick your team</h2>
+        <div class="row" id="tTeamRow"></div>
+      </div>
+      <div id="tBracket" class="bracket"></div>
+      <div id="tBox"></div>
+      <div class="row"><button id="btnTPlay">Start Tournament</button><button id="btnTMenu" class="ghost">Menu</button></div>
     </div>
   </div>
 
@@ -699,7 +765,8 @@ const HAIRS = [
   {H:'#221409', h:'#3a2814'},
   {H:'#3a2814', h:'#553d20'},
   {H:'#111111', h:'#2c2c2c'},
-  {H:'#4a3010', h:'#6b4a1e'}
+  {H:'#4a3010', h:'#6b4a1e'},
+  {H:'#9a9a9a', h:'#c4c4c4'}
 ];
 const HAIR_STYLES = ['plain','afro','headband'];
 function shadeC(hex,pct){
@@ -1236,6 +1303,275 @@ document.getElementById('btnFrSimWeek').addEventListener('click', ()=>{
   renderFranchise();
 });
 
+/* ---------------- PROFILE: coins, unlocks, daily challenges ---------------- */
+const PROFILE_KEY='hoopLegendsProfile';
+let PROFILE = (()=>{ try{ return JSON.parse(localStorage.getItem(PROFILE_KEY))||null; }catch(e){ return null; } })()
+  || { coins:0, owned:{ stars:['rookie'], balls:['classic'], shoes:['white'] }, equip:{ star:'rookie', ball:'classic', shoe:'white' }, daily:null, earned:0 };
+function saveProfile(){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(PROFILE)); }catch(e){} }
+// original players — every one is earned with coins, none are real athletes
+const STARS = [
+  { id:'rookie', name:'Rookie',        tag:'All-round', price:0,   attrs:{shooting:6,passing:6,speed:6,defense:6},  height:75, skin:0, hair:0, style:'headband', num:1 },
+  { id:'splash', name:'Splash Mercer', tag:'Shooter',   price:250, attrs:{shooting:10,passing:6,speed:6,defense:4}, height:74, skin:1, hair:2, style:'plain',    num:30 },
+  { id:'flash',  name:'Flash Okafor',  tag:'Speed',     price:250, attrs:{shooting:6,passing:7,speed:10,defense:5}, height:70, skin:3, hair:0, style:'headband', num:0 },
+  { id:'wall',   name:'The Wall',      tag:'Defense',   price:300, attrs:{shooting:4,passing:5,speed:5,defense:10}, height:83, skin:2, hair:1, style:'afro',     num:55 },
+  { id:'dime',   name:'Dime Hollis',   tag:'Playmaker', price:300, attrs:{shooting:6,passing:10,speed:7,defense:5}, height:73, skin:0, hair:3, style:'plain',    num:11 },
+  { id:'rome',   name:'Rome Sable',    tag:'Two-way',   price:500, attrs:{shooting:8,passing:7,speed:8,defense:8},  height:79, skin:2, hair:2, style:'headband', num:7 },
+  { id:'frost',  name:'Old Man Frost', tag:'Legend',    price:900, attrs:{shooting:10,passing:9,speed:7,defense:7}, height:78, skin:1, hair:4, style:'plain',    num:99 }
+];
+const BALLS = [
+  { id:'classic', name:'Classic', price:0,   pal:{O:'#241c12',B:'#e87c30',b:'#c9601d'}, hi:'#f6a35f' },
+  { id:'street',  name:'Street',  price:120, pal:{O:'#1a120b',B:'#a8582a',b:'#7f3f1c'}, hi:'#c97a4a' },
+  { id:'ice',     name:'Ice',     price:250, pal:{O:'#1b2a3a',B:'#dfeefa',b:'#9cc4e4'}, hi:'#ffffff' },
+  { id:'neon',    name:'Neon',    price:300, pal:{O:'#120a22',B:'#2ee6ff',b:'#ff3ea5'}, hi:'#e9fbff' },
+  { id:'gold',    name:'Gold',    price:450, pal:{O:'#3a2a06',B:'#f2c14e',b:'#c9921e'}, hi:'#fff1b8' }
+];
+const SHOES = [
+  { id:'white', name:'Clean White', price:0,   color:'#f2f4f8' },
+  { id:'black', name:'Blackout',    price:80,  color:'#26282e' },
+  { id:'red',   name:'Fire Red',    price:80,  color:'#e5534b' },
+  { id:'volt',  name:'Volt',        price:150, color:'#d7ff3a' },
+  { id:'gold',  name:'Gold',        price:300, color:'#f2c14e' }
+];
+const BALL_SKINS = {};
+function ballFramesFor(id){
+  if(!BALL_SKINS[id]){ const b=BALLS.find(x=>x.id===id)||BALLS[0]; BALL_SKINS[id]=buildBallFrames(b.pal, b.hi); }
+  return BALL_SKINS[id];
+}
+function equippedStar(){ return STARS.find(x=>x.id===PROFILE.equip.star) || STARS[0]; }
+function equippedShoe(){ return (SHOES.find(x=>x.id===PROFILE.equip.shoe) || SHOES[0]).color; }
+// the arcade modes (quick play, tournament, contest) use your equipped star player
+function starPlayer(){
+  const st=equippedStar();
+  return { name: st.id==='rookie' ? 'You' : st.name.split(' ').slice(-1)[0], position:'Guard', heightIn:st.height,
+    attrs:Object.assign({}, st.attrs), level:1, xp:0, xpToNext:100, sp:0, badges:[],
+    skinIdx:st.skin, hairIdx:st.hair, hairStyle:st.style, jerseyNum:st.num };
+}
+function refreshCoins(){
+  ['menuCoins','lockerCoins'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=PROFILE.coins.toLocaleString(); });
+}
+
+/* daily challenges: three per day, picked deterministically from the date */
+const DAILY_POOL = [
+  { id:'win',      text:'Win a game (any mode except Versus)', test:c=>c.won && !c.contest && c.mode!=='versus' },
+  { id:'score15',  text:'Score 15+ points in one game',        test:c=>c.st.points>=15 },
+  { id:'threes3',  text:'Make 3 three-pointers in one game',   test:c=>c.st.tpm>=3 },
+  { id:'steals3',  text:'Get 3 steals in one game',            test:c=>c.st.steals>=3 },
+  { id:'assist4',  text:'Dish 4 assists in one game',          test:c=>c.st.assists>=4 },
+  { id:'dunk',     text:'Throw down a special dunk',           test:c=>c.dunks>0 },
+  { id:'contest12',text:'Score 12+ in the 3-Point Contest',    test:c=>c.contest && c.contestScore>=12 },
+  { id:'hardwin',  text:'Win a game on Hard',                  test:c=>c.won && !c.contest && c.mode!=='versus' && c.diff==='hard' },
+  { id:'block2',   text:'Block 2 shots in one game',           test:c=>c.st.blocks>=2 },
+  { id:'onevone',  text:'Win a 1 v 1 game',                    test:c=>c.won && c.size===1 && c.mode!=='versus' && !c.contest }
+];
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function ensureDailies(){
+  const k=todayKey();
+  if(PROFILE.daily && PROFILE.daily.date===k) return;
+  let h=0; for(const ch of k) h=(h*31+ch.charCodeAt(0))>>>0;
+  const pool=DAILY_POOL.map(d=>d.id), pick=[];
+  while(pick.length<3){ h=(h*1103515245+12345)>>>0; const i=h%pool.length; pick.push(pool.splice(i,1)[0]); }
+  PROFILE.daily={ date:k, items:pick.map(id=>({ id, done:false })) };
+  saveProfile();
+}
+function renderDailies(){
+  ensureDailies();
+  document.getElementById('dailyList').innerHTML = PROFILE.daily.items.map(it=>{
+    const d=DAILY_POOL.find(x=>x.id===it.id);
+    return `<div class="dailyItem${it.done?' done':''}"><span class="chk"></span>${d.text}</div>`;
+  }).join('');
+}
+// coins + challenges after every game; returns a one-line summary
+function awardAfterGame(won){
+  if(!Game) return '';
+  ensureDailies();
+  const st=Game.stats, contest=!!Game.shootout;
+  let c;
+  if(contest) c = Game.shootout.score*3;
+  else if(S.mode==='versus') c = 10;
+  else {
+    c = (won?40:12) + st.points + st.assists*2 + (st.steals+st.blocks)*2;
+    if(S.difficulty==='hard') c=Math.round(c*1.5); else if(S.difficulty==='easy') c=Math.round(c*0.7);
+  }
+  const ctx={ won, st, contest, contestScore:contest?Game.shootout.score:0, mode:S.mode, diff:S.difficulty, dunks:Game.userDunks||0, size:Game.size||5 };
+  const doneNow=[];
+  PROFILE.daily.items.forEach(it=>{
+    if(it.done) return;
+    const d=DAILY_POOL.find(x=>x.id===it.id);
+    if(d && d.test(ctx)){ it.done=true; c+=75; doneNow.push(d.text); }
+  });
+  PROFILE.coins+=c; PROFILE.earned=(PROFILE.earned||0)+c;
+  saveProfile(); refreshCoins();
+  Game.awardText = `+${c} coins` + (doneNow.length ? ` · Daily done: ${doneNow.join(', ')}` : '');
+  return Game.awardText;
+}
+function awardHTML(){ return Game && Game.awardText ? `<div class="small-txt" style="margin-top:8px;color:var(--accent-soft)">${Game.awardText}</div>` : ''; }
+
+/* ---------------- LOCKER ---------------- */
+let lockerTab='stars';
+function previewSprite(cv, opts){
+  const c=cv.getContext('2d'); c.imageSmoothingEnabled=false; c.clearRect(0,0,cv.width,cv.height);
+  const spr=buildSprite({ afro:opts.style==='afro', headband:opts.style==='headband' });
+  const pal=spritePalette({ primary:'#3a3e47', secondary:'#ecebe6', abbr:'LCK' }, opts.skin, opts.hair, false, opts.shoe);
+  const sc=3, ox=Math.round((cv.width-SPRITE_W*sc)/2), oy=cv.height-SPRITE_H*sc-4;
+  spr.stand.forEach((row,r)=>row.split('').forEach((ch,k)=>{ if(ch==='.') return; c.fillStyle=pal[ch]; c.fillRect(ox+k*sc, oy+r*sc, sc, sc); }));
+}
+function renderLocker(){
+  refreshCoins();
+  document.querySelectorAll('#lockerTabs .diffBtn').forEach(b=>b.classList.toggle('sel', b.dataset.t===lockerTab));
+  const list = lockerTab==='stars'?STARS : lockerTab==='balls'?BALLS : SHOES;
+  document.getElementById('lockerNote').textContent = lockerTab==='stars'
+    ? 'Your equipped player is who you control in Quick Play, Tournament and the 3-Point Contest. My Journey uses the player you create.'
+    : lockerTab==='balls' ? 'Ball skins are used in every mode.' : 'Shoes are worn by your player in every mode.';
+  const grid=document.getElementById('lockerGrid'); grid.innerHTML='';
+  const eqStar=equippedStar();
+  list.forEach(item=>{
+    const owned=PROFILE.owned[lockerTab].includes(item.id), eq=PROFILE.equip[lockerTab==='stars'?'star':lockerTab==='balls'?'ball':'shoe']===item.id;
+    const card=document.createElement('div'); card.className='lockCard'+(eq?' eq':'');
+    const cv=document.createElement('canvas');
+    if(lockerTab==='balls'){ cv.width=72; cv.height=72; const g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.drawImage(ballFramesFor(item.id)[0], 9, 9, 54, 54); }
+    else { cv.width=72; cv.height=84;
+      const look = lockerTab==='stars' ? item : eqStar;
+      previewSprite(cv, { style:look.style, skin:look.skin, hair:look.hair, shoe: lockerTab==='shoes' ? item.color : equippedShoe() }); }
+    card.appendChild(cv);
+    const info=document.createElement('div');
+    info.innerHTML = `<div class="lcName">${item.name}</div>` + (item.tag?`<div class="lcTag">${item.tag}</div>`:'') +
+      (item.attrs ? `<div class="lcStats">SHT ${item.attrs.shooting} · PAS ${item.attrs.passing}<br/>SPD ${item.attrs.speed} · DEF ${item.attrs.defense} · ${heightLabelStr(item.height)}</div>` : '');
+    card.appendChild(info);
+    const btn=document.createElement('button'); btn.className='small'+(eq?' sel':owned?' ghost':'');
+    btn.textContent = eq ? 'Equipped' : owned ? 'Equip' : `Unlock · ${item.price}`;
+    if(!owned && PROFILE.coins<item.price) btn.disabled=true;
+    btn.onclick=()=>{
+      const slot = lockerTab==='stars'?'star':lockerTab==='balls'?'ball':'shoe';
+      if(!owned){
+        if(PROFILE.coins<item.price) return;
+        PROFILE.coins-=item.price; PROFILE.owned[lockerTab].push(item.id); Audio8.badge();
+        flash('lockerMsg', `Unlocked ${item.name}!`);
+      } else Audio8.click();
+      PROFILE.equip[slot]=item.id; saveProfile(); renderLocker();
+    };
+    card.appendChild(btn);
+    grid.appendChild(card);
+  });
+}
+document.getElementById('lockerTabs').addEventListener('click', e=>{ const b=e.target.closest('.diffBtn'); if(!b) return; Audio8.click(); lockerTab=b.dataset.t; flash('lockerMsg',''); renderLocker(); });
+document.getElementById('btnLocker').addEventListener('click', ()=>{ Audio8.ensureRunning(); Audio8.click(); renderLocker(); showScreen('screen-locker'); });
+document.getElementById('btnLockerBack').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
+
+/* ---------------- FORMAT (1v1 / 3v3 / 5v5) ---------------- */
+function syncFormat(){ const f=String(PREFS.format||5); document.querySelectorAll('#formatRow .diffBtn').forEach(b=>b.classList.toggle('sel', b.dataset.f===f)); }
+document.getElementById('formatRow').addEventListener('click', e=>{ const b=e.target.closest('.diffBtn'); if(!b) return; Audio8.click(); PREFS.format=parseInt(b.dataset.f); savePrefs(); syncFormat(); });
+
+/* ---------------- TOURNAMENT: 8 teams, single elimination ---------------- */
+const ALLSTARS = { name:'Legends All-Stars', abbr:'ALS', primary:'#2a2d34', secondary:'#f2c14e' };
+function tTeam(id){ return id===7 ? ALLSTARS : TEAMS[id]; }
+const T_ROUNDS = ['Quarterfinal','Semifinal','Final'];
+let tPickIdx = null;
+function openTourney(){
+  S.tourney = null; tPickIdx = null;
+  const row=document.getElementById('tTeamRow'); row.innerHTML='';
+  TEAMS.forEach((t,i)=>{
+    const card=document.createElement('div'); card.className='teamPick'; card.style.width='120px';
+    card.innerHTML=`<div class="jersey" style="background:${t.primary};border-color:${t.secondary}"></div><p style="margin:0;font-size:12px;color:var(--text)"><b>${t.name}</b></p>`;
+    card.onclick=()=>{ Audio8.click(); row.querySelectorAll('.teamPick').forEach(c=>c.classList.remove('sel')); card.classList.add('sel'); tPickIdx=i; };
+    row.appendChild(card);
+  });
+  document.getElementById('tPick').style.display='';
+  document.getElementById('tBracket').innerHTML='';
+  document.getElementById('tBox').innerHTML='';
+  document.getElementById('tTitle').textContent='Tournament';
+  document.getElementById('tStatus').textContent=`Pick a team. You play as ${equippedStar().name} (change in the Locker). Win three straight to take the title.`;
+  document.getElementById('btnTPlay').textContent='Start Tournament';
+  showScreen('screen-tourney');
+}
+function newBracket(myIdx){
+  const ids=[0,1,2,3,4,5,6,7];
+  for(let i=ids.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); [ids[i],ids[k]]=[ids[k],ids[i]]; }
+  const rating={}; ids.forEach(id=>rating[id]= id===7 ? 1.22 : 0.92+Math.random()*0.22);
+  return { me:myIdx, rounds:[ids], round:0, out:false, champ:null, rating };
+}
+function tOpponent(){ const t=S.tourney, r=t.rounds[t.round], i=r.indexOf(t.me); return r[i%2===0 ? i+1 : i-1]; }
+function tSim(a,b){ const ra=S.tourney.rating[a], rb=S.tourney.rating[b]; return Math.random() < ra/(ra+rb) ? a : b; }
+function tFinishRound(myWinner){
+  const t=S.tourney, r=t.rounds[t.round], next=[];
+  for(let i=0;i<r.length;i+=2){
+    const a=r[i], b=r[i+1];
+    next.push(((a===t.me||b===t.me) && myWinner!=null) ? myWinner : tSim(a,b));
+  }
+  t.rounds.push(next);
+  t.round++;
+  if(next.length===1) t.champ=next[0];
+}
+function renderBracket(){
+  const t=S.tourney, el=document.getElementById('tBracket');
+  let html='';
+  for(let r=0;r<3;r++){
+    const teams=t.rounds[r] || [];
+    const size = 8>>r;
+    html+=`<div class="bCol"><h3>${T_ROUNDS[r]}</h3>`;
+    for(let m=0;m<size/2;m++){
+      html+='<div class="bMatch">';
+      for(let k=0;k<2;k++){
+        const id=teams[m*2+k];
+        if(id==null){ html+='<div class="bTeam tbd"><span class="sw" style="background:#2b2e35"></span>TBD</div>'; continue; }
+        const nxt=t.rounds[r+1]; const lost = nxt && !nxt.includes(id);
+        const tm=tTeam(id);
+        html+=`<div class="bTeam${id===t.me?' me':''}${lost?' lost':''}"><span class="sw" style="background:${tm.primary};outline:2px solid ${tm.secondary}"></span>${tm.name}</div>`;
+      }
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+function renderTourney(){
+  const t=S.tourney;
+  document.getElementById('tPick').style.display='none';
+  renderBracket();
+  const play=document.getElementById('btnTPlay');
+  if(t.champ!=null){
+    const mine=t.champ===t.me;
+    document.getElementById('tTitle').textContent = mine ? 'Champions!' : 'Tournament over';
+    document.getElementById('tStatus').textContent = mine ? `${tTeam(t.me).name} win the tournament. +150 bonus coins.` : `${tTeam(t.champ).name} won it all.${t.out?' Your run ended early.':''}`;
+    play.textContent='New Tournament';
+  } else {
+    const opp=tTeam(tOpponent());
+    document.getElementById('tTitle').textContent = T_ROUNDS[t.round];
+    document.getElementById('tStatus').textContent = `${T_ROUNDS[t.round]}: ${tTeam(t.me).name} vs ${opp.name}.${t.round>0?' Every round gets tougher.':''}`;
+    play.textContent=`Play ${T_ROUNDS[t.round]}`;
+  }
+  showScreen('screen-tourney');
+}
+document.getElementById('btnTPlay').addEventListener('click', ()=>{
+  Audio8.ensureRunning(); Audio8.startMusic(); Audio8.click();
+  const t=S.tourney;
+  if(!t || t.champ!=null){
+    if(t && t.champ!=null){ openTourney(); return; }
+    if(tPickIdx==null){ document.getElementById('tStatus').textContent='Pick a team first.'; return; }
+    S.tourney=newBracket(tPickIdx);
+    renderTourney(); return;
+  }
+  S.mode='tourney'; S.sponsor=null;
+  S.season={ wins:0, losses:0, round:t.round, oppIdx:null };
+  S.team=TEAMS[t.me]; S.player=starPlayer();
+  const oppId=tOpponent();
+  t.nextSkill = t.rating[oppId] + t.round*0.06;
+  tipOff(()=>startGame(tTeam(oppId)));
+});
+document.getElementById('btnTMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
+document.getElementById('modeTourney').addEventListener('click', ()=>{ Audio8.ensureRunning(); Audio8.click(); if(S.tourney && S.tourney.champ==null && S.mode==='tourney') renderTourney(); else openTourney(); });
+function tourneyAfterGame(won){
+  const t=S.tourney;
+  if(won){ tFinishRound(t.me); }
+  else {
+    t.out=true;
+    tFinishRound(tOpponent());
+    while(t.champ==null) tFinishRound(null);   // sim the rest without you
+  }
+  if(t.champ===t.me){ PROFILE.coins+=150; saveProfile(); refreshCoins(); Platform.happyTime(); Audio8.badge(); Audio8.cheer(true); }
+  renderTourney();
+  document.getElementById('tBox').innerHTML = boxScoreHTML(won) + awardHTML();
+}
+
 /* ---------------- QUICK PLAY + 3-POINT CONTEST ---------------- */
 function quickPlayer(name){
   return { name, position:'Guard', heightIn:76, attrs:{ shooting:7, passing:7, speed:7, defense:6 },
@@ -1252,7 +1588,7 @@ function quickPlay(rematch){
     quickTeams=[a,b];
   }
   S.team=TEAMS[quickTeams[0]];
-  S.player=quickPlayer('You');
+  S.player=starPlayer();
   const opp=TEAMS[quickTeams[1]];
   tipOff(()=>startGame(opp));
 }
@@ -1260,7 +1596,7 @@ function startShootout(){
   Audio8.startMusic();
   S.mode='shootout'; S.sponsor=null; S.season={ wins:0, losses:0, round:0, oppIdx:null };
   S.team=TEAMS[Math.floor(Math.random()*TEAMS.length)];
-  S.player=quickPlayer('You');
+  S.player=starPlayer();
   const opp=TEAMS[(TEAMS.indexOf(S.team)+1)%TEAMS.length];
   tipOff(()=>startGame(opp, { shootout:true }));
 }
@@ -1275,7 +1611,7 @@ let postAction = null;
 function showResult(title, html, team, label, againLabel, againFn){
   document.querySelector('#screen-trophy h1').textContent = title;
   document.getElementById('mvpText').style.display = 'none';
-  document.getElementById('resultBox').innerHTML = html;
+  document.getElementById('resultBox').innerHTML = html + awardHTML();
   drawTrophyArt(team, label);
   document.getElementById('btnPostChamp').textContent = againLabel;
   document.getElementById('btnPostMenu').style.display = '';
@@ -1578,7 +1914,7 @@ document.getElementById('btnHubSave').addEventListener('click', ()=>{ Audio8.cli
 document.getElementById('btnHubMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
 document.getElementById('btnFrSave').addEventListener('click', ()=>{ Audio8.click(); openSaveMenu(); });
 document.getElementById('btnFrMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
-function goMenu(){ refreshContinue(); syncMuteButton(); refreshShootoutDesc(); showScreen('screen-mode'); }
+function goMenu(){ refreshContinue(); syncMuteButton(); refreshShootoutDesc(); refreshCoins(); renderDailies(); syncFormat(); showScreen('screen-mode'); }
 
 /* ---------------- Franchise: end-of-season ROOKIE DRAFT (worst picks first) ---------------- */
 let draftSel=null, draftTimer=null;
@@ -1898,7 +2234,7 @@ function kitFor(team, isAway){
   if(isAway && typeof Game!=='undefined' && Game && Game.awayRoad) return { primary:'#eeeef0', secondary:team.primary, abbr:team.abbr+'R' };
   return team;
 }
-function spritePalette(teamIn, skinIdx, hairIdx, isAway){
+function spritePalette(teamIn, skinIdx, hairIdx, isAway, shoe){
   const team = kitFor(teamIn, isAway);
   const sk = SKINS[skinIdx%SKINS.length], hr = HAIRS[hairIdx%HAIRS.length];
   return {
@@ -1909,7 +2245,7 @@ function spritePalette(teamIn, skinIdx, hairIdx, isAway){
     J:team.primary, j:shadeC(team.primary,-32),
     K:team.secondary, k:shadeC(team.secondary,-32),
     T:team.secondary,
-    W:'#f2f4f8'
+    W:shoe||'#f2f4f8'
   };
 }
 
@@ -2373,9 +2709,14 @@ function startGame(forcedOpponent, opts){
     const my = teamPower(S.franchise.teamIdx), op = teamPower(TEAMS.indexOf(opponent));
     homeSkill = Math.max(0.8, Math.min(1.25, 1 + (my-70)/45));
     awaySkill = Math.max(0.8, Math.min(1.3, 1 + (op-70)/45 + (S.franchise.phase==='playoffs'?0.06:0)));
+  } else if(S.mode==='tourney' && S.tourney){
+    awaySkill = S.tourney.nextSkill || 1;
   } else if(!versus){
     awaySkill = 1 + round*0.12;          // each playoff round is tougher
   }
+  // 1v1 / 3v3 / 5v5 (career modes are always 5v5)
+  const size = opts.shootout ? 1 : (['quick','tourney','versus'].includes(S.mode) ? (PREFS.format||5) : 5);
+  const roles = size===1 ? ['PG'] : size===3 ? ['PG','SG','C'] : ROLES;
   const diff = versus ? 1.0 : awaySkill;
   const arenaKey = pickArena();
 
@@ -2388,21 +2729,22 @@ function startGame(forcedOpponent, opts){
     hairStyle: S.player.hairStyle || 'headband',
     skinIdx: S.player.skinIdx!=null ? S.player.skinIdx : 0,
     hairIdx: S.player.hairIdx!=null ? S.player.hairIdx : 0,
-    jerseyNum: S.player.jerseyNum!=null ? S.player.jerseyNum : 23
+    jerseyNum: S.player.jerseyNum!=null ? S.player.jerseyNum : 23,
+    shoe: equippedShoe()
   });
   home.push(user);
-  for(let i=0;i<4;i++){
-    const slot = SLOTS[ROLES[i+1]] || SLOTS.SG;
+  for(let i=1;i<size;i++){
+    const slot = SLOTS[roles[i]] || SLOTS.SG;
     home.push(makePlayer({
-      team:'home', role:ROLES[i+1],
+      team:'home', role:roles[i],
       x: COURT.hoopRightX - slot.dist, y: COURT.hoopY + slot.yOff
     }));
   }
   // away starts on defense, matched to home players, spaced off them
-  for(let i=0;i<5;i++){
+  for(let i=0;i<size;i++){
     const mark = home[i];
     away.push(makePlayer({
-      team:'away', role:ROLES[i],
+      team:'away', role:roles[i],
       x: mark.x + 90, y: mark.y + 20,
       aiTimer: 2 // no instant steal rolls at tip-off
     }));
@@ -2426,7 +2768,8 @@ function startGame(forcedOpponent, opts){
            arcT:0, arcDur:0, sx:0, sy:0, tx:0, ty:0, made:false, isThree:false,
            shooter:null, vx:0, vy:0, vh:0, snap:true, spin:0, dead:false, netDrop:0, lastTouch:'home' },
     particles:[], net:{L:0,R:0}, rimShake:{L:0,R:0}, deadT:0, deadNext:null, time:0, labels:[],
-    arenaKey, arena: ARENAS[arenaKey],
+    arenaKey, arena: ARENAS[arenaKey], size, userDunks:0, awardText:'',
+    ballFrames: ballFramesFor(PROFILE.equip.ball),
     awayRoad: colorDist(S.team.primary, opponent.primary) < 140,
     camX: Math.max(0, user.x - 600),
     stamina: 100, stamina2: 100,
@@ -2929,6 +3272,7 @@ function useSpecial(u, who){
       launch(b, hx, COURT.hoopY, RIM_H+12, 0.38);
       if(u.isUser){ Game.stats.fga++; }
       addFloat(u.x,u.y-120,"POSTER DUNK!",'#ffd166',20);
+      if(u.isUser) Game.userDunks=(Game.userDunks||0)+1;
       Audio8.shotRelease();
       screenShake(5,0.2);
     } else {
@@ -3419,6 +3763,16 @@ function resolveShot(){
    after a short beat the inbounder passes it in. Then play goes live — the ball
    travels as a visible pass instead of teleporting up the floor. */
 function placeInbound(inb, rec, ix, iy, rx, ry){
+  if(!inb || inb===rec){
+    // 1v1: no inbounder — the player just takes it from inside the line
+    const p=rec; p.x=rx; p.y=ry; p.px=rx; p.py=ry; p.mvx=0; p.mvy=0; p.jumpH=0; p.jumping=false;
+    p.facing = attackingHoopX(p.team)>p.x ? 1 : -1;
+    const b=Game.ball; b.inAir=false; b.passing=false; b.loose=false; b.rest=false;
+    attachBall(p, true);
+    Game.phase='live'; Game.inbounder=null; Game.inboundReceiver=null; Game.shotClock=24;
+    Game.all.forEach(o=>{ if(o.team!==p.team) o.aiTimer=Math.max(o.aiTimer,1.2); });
+    return;
+  }
   inb.x=ix; inb.y=iy; inb.moving=false; inb.mvx=0; inb.mvy=0; inb.jumpH=0; inb.jumping=false;
   inb.px=ix; inb.py=iy;
   inb.facing = rx>ix ? 1 : -1;
@@ -4205,12 +4559,12 @@ const SPRITE_CACHE = new Map();
 function cachedSprite(p, pose){
   const team = p.team==='home'?Game.teamHome:Game.teamAway;
   const road = p.team==='away' && Game.awayRoad;
-  const key = `${team.abbr}${road?'R':''}|${p.skinIdx}|${p.hairIdx}|${p.hairStyle}|${pose}|${p.facing<0?'L':'R'}`;
+  const key = `${team.abbr}${road?'R':''}|${p.skinIdx}|${p.hairIdx}|${p.hairStyle}|${p.shoe||''}|${pose}|${p.facing<0?'L':'R'}`;
   let cv = SPRITE_CACHE.get(key);
   if(cv) return cv;
   cv = document.createElement('canvas'); cv.width=SPRITE_W; cv.height=SPRITE_H;
   const c = cv.getContext('2d');
-  const pal = spritePalette(team, p.skinIdx, p.hairIdx, p.team==='away');
+  const pal = spritePalette(team, p.skinIdx, p.hairIdx, p.team==='away', p.shoe);
   const grid = p.sprites[pose];
   for(let r=0;r<grid.length;r++){
     const row = grid[r];
@@ -4310,7 +4664,7 @@ function drawBallSpr(){
   // shadow on the floor: smaller and fainter the higher the ball is
   const k = 1/(1+Math.max(0,b.h)/140);
   pixelEllipse(b.x, b.y, Math.max(3,Math.round(10*k)), 3, 'rgba(20,12,4,'+(0.3*k).toFixed(2)+')');
-  const frames = (Game.shootout && b.money) ? BALL_FRAMES_MONEY : BALL_FRAMES;
+  const frames = (Game.shootout && b.money) ? BALL_FRAMES_MONEY : (Game.ballFrames || BALL_FRAMES);
   const frame = frames[Math.floor(Math.abs(b.spin||0))%4];
   ctx.drawImage(frame, Math.round(b.x - sz/2), Math.round(b.y - b.h - sz/2), sz, sz);
 }
@@ -4579,6 +4933,8 @@ function endGame(){
   const won = Game.scoreHome > Game.scoreAway;
 
   S.rewardUsed=false;
+  awardAfterGame(won);
+  if(S.mode==='tourney' && S.tourney){ tourneyAfterGame(won); return; }
   if(Game.shootout){
     const so=Game.shootout, best=PREFS.best3pt, isBest = best==null || so.score>best;
     if(isBest){ PREFS.best3pt=so.score; savePrefs(); Platform.happyTime(); }
@@ -4610,7 +4966,7 @@ function endGame(){
     autoSave();
     renderFranchise();
     flash('frMsg', `Final: ${S.team.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr} (${won?'WIN':'LOSS'})`, won?'var(--success)':'var(--danger)');
-    document.getElementById('frBox').innerHTML = boxScoreHTML(won);
+    document.getElementById('frBox').innerHTML = boxScoreHTML(won) + awardHTML();
     showScreen('screen-franchise');
     return;
   }
@@ -4634,7 +4990,7 @@ function endGame(){
       autoSave();
       renderHub();
       flash('hubMsg', `Victory! ${STORY.win[fin]} Advancing to ${ROUND_NAMES[S.season.round]}. +${xp} XP.${lvNote}${spNote}`, 'var(--success)');
-      document.getElementById('hubBox').innerHTML = boxScoreHTML(true);
+      document.getElementById('hubBox').innerHTML = boxScoreHTML(true) + awardHTML();
       showScreen('screen-hub');
     } else {
       S.season.round=3;
@@ -4646,12 +5002,29 @@ function endGame(){
     autoSave();
     renderHub();
     flash('hubMsg', `${STORY.lose} +${xp} XP.${lvNote}${spNote}`, 'var(--danger)');
-    document.getElementById('hubBox').innerHTML = boxScoreHTML(false);
+    document.getElementById('hubBox').innerHTML = boxScoreHTML(false) + awardHTML();
     showScreen('screen-hub');
   }
 }
 
+// a pixel scoreboard for losses (no trophy for the losing side)
+function drawFinalBoard(){
+  const tc=document.getElementById('trophyCanvas'), t=tc.getContext('2d');
+  t.imageSmoothingEnabled=false;
+  const real=ctx; ctx=t;
+  P(0,0,tc.width,tc.height,'#0d0f13');
+  P(30,60,240,130,'#000000'); P(34,64,232,122,'#111318');
+  pxText('FINAL', 150, 76, 3, '#f2c14e', 'center', '');
+  [[Game.teamHome,Game.scoreHome,70],[Game.teamAway,Game.scoreAway,230]].forEach(([tm,sc,x])=>{
+    P(x-36,108,72,8,tm.primary);
+    pxText(tm.abbr, x, 124, 3, '#ecebe6', 'center', '');
+    pxText(String(sc), x, 146, 5, '#ffffff', 'center', '');
+  });
+  pxText('-', 150, 150, 4, '#5d6068', 'center', '');
+  ctx=real;
+}
 function drawTrophyArt(team, label){
+  if(label==='FINAL'){ drawFinalBoard(); return; }
   const tc=document.getElementById('trophyCanvas');
   const t=tc.getContext('2d');
   t.imageSmoothingEnabled=false;
@@ -4715,7 +5088,7 @@ function renderCourtPicker(){
   });
 }
 setTimeout(renderCourtPicker, 0);
-refreshShootoutDesc();
+refreshShootoutDesc(); refreshCoins(); renderDailies(); syncFormat();
 Platform.init().then(()=>Platform.loadingDone());
 // phones: the game needs landscape — pause and ask to rotate
 function checkOrientation(){
@@ -4726,7 +5099,7 @@ function checkOrientation(){
 window.addEventListener('resize', checkOrientation);
 checkOrientation();
 // debug handle for automated tests (read-only use)
-if(/[?&#]debug/.test(location.href)) window.__HL = { get Game(){ return Game; }, get S(){ return S; }, KEYS, KB, PREFS, shoot:(p,t)=>releaseShot(p,t),
+if(/[?&#]debug/.test(location.href)) window.__HL = { get Game(){ return Game; }, get S(){ return S; }, KEYS, KB, PREFS, get PROFILE(){ return PROFILE; }, shoot:(p,t)=>releaseShot(p,t),
   tick(n){ for(let i=0;i<n && Game && !Game.over;i++) update(1/60); if(Game && !Game.over) render(); } };
 })();
 </script>

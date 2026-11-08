@@ -6,6 +6,11 @@ in a browser and play.
 
 ## What's inside
 - **Quick Play**: straight into a game against the CPU, no setup.
+- **Tournament**: eight teams, single elimination, every round tougher.
+- **1 v 1, 3 v 3 or 5 v 5** for Quick Play, Tournament and Versus.
+- **Locker + coins**: earn coins in every mode and unlock star players (each
+  with their own ratings), ball skins and shoes. No purchases, everything is
+  earned by playing. Three **daily challenges** pay bonus coins.
 - **3-Point Contest**: five racks in sixty seconds, money balls worth two,
   best score saved.
 - **My Journey**: create a player (position, height, attributes, skin tone,
@@ -29,6 +34,9 @@ in a browser and play.
   auto-appear on phones/tablets.
 
 ## Publishing
+Ready-to-upload files are in `release/` (Poki, CrazyGames and itch.io zips plus
+store art). Live build: https://hoop-legends-nine.vercel.app
+
 Run `web/make-portal-build.sh` to get upload-ready zips for itch.io, Poki and
 CrazyGames (the right SDK script is added for each), plus store art in
 `web/assets/`. See `web/README.md` for what the SDK integration does and how to

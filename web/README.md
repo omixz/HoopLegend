@@ -9,7 +9,7 @@ step, no assets to host, no network calls. Portals just need it as `index.html`.
 ./make-portal-build.sh
 ```
 
-Produces (in `web/dist/`, git-ignored):
+Produces (in `release/` at the repo root, committed):
 
 | Package | What's inside | Upload to |
 |---|---|---|
@@ -17,7 +17,7 @@ Produces (in `web/dist/`, git-ignored):
 | `hoop-legends-poki.zip` | `index.html` + Poki SDK v2 script tag | Poki for Developers |
 | `hoop-legends-crazygames.zip` | `index.html` + CrazyGames SDK v3 script tag | CrazyGames Developer Portal |
 
-Store art is in `web/assets/`: `cover-1280x720.png`, `thumb-512x512.png`,
+Store art is in `web/assets/` (copied to `release/store-art/`): `cover-1280x720.png`, `thumb-512x512.png`,
 `icon-256x256.png` and three 1280x720 screenshots (Pro Arena, Blacktop, Beach).
 
 ## What the game already does for portals
