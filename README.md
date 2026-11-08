@@ -12,6 +12,9 @@ in a browser and play.
   standings, sim or play games, trades (including tradeable future draft
   picks), an end-of-season rookie draft, and player development/retirement.
 - **Local 2-player versus** on one keyboard.
+- Save/load with 3 manual slots plus an autosave after every game ("Continue"
+  on the main menu). No `prompt()`/`alert()` dialogs, so it works inside
+  portal iframes.
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
   (Web Audio API, no audio files), difficulty levels, and touch controls that
   auto-appear on phones/tablets.

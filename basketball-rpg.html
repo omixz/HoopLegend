@@ -52,13 +52,18 @@
     border:2px solid var(--border);
     box-shadow: 0 24px 70px rgba(0,0,0,.6), 0 0 0 1px rgba(46,230,255,.1);
     background:#0e1524;
-    max-width:100vw; max-height:100vh;
+    width:min(100vw, calc(100vh * 16 / 9)); height:auto;
+    max-width:100vw; max-height:100vh; display:block;
   }
   .screen{
     position:absolute; inset:0; display:none; flex-direction:column;
-    align-items:center; justify-content:center; text-align:center;
+    align-items:center; justify-content:flex-start; text-align:center;
     padding:24px; overflow:auto;
   }
+  /* auto margins center short panels but let tall ones scroll from the top (no clipped headers) */
+  .screen > *{ margin-top:auto; margin-bottom:auto; flex-shrink:0; }
+  #screen-game{ padding:0; overflow:hidden; }
+  table td, table th{ text-align:left; padding:2px 4px; }
   .screen.active{ display:flex; }
   .panel{
     position:relative;
@@ -161,7 +166,17 @@
   .small-txt{ font-size:12px; color:var(--text-dim); }
   .flashMsg{ color:var(--success); font-weight:700; min-height:18px; font-size:13px; margin-top:10px; }
   .heightVal{ color:var(--accent2); font-weight:800; }
-  select{ font-family:inherit; }
+  select{ font-family:inherit; background:#0a1220; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:3px 6px; }
+  input[type=number]{
+    font-family:inherit; font-size:15px; padding:8px 10px; background:#0a1220; color:var(--text);
+    border:2px solid var(--border); border-radius:10px; outline:none; text-align:center;
+  }
+  input[type=number]:focus{ border-color:var(--accent2); }
+  .modalWrap{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(4,8,15,.78); z-index:50; padding:16px; }
+  .modalWrap.open{ display:flex; }
+  .slotBtn{ display:block; width:100%; margin:8px 0; text-align:left; text-transform:none; letter-spacing:0; font-weight:700; }
+  .boxScore{ display:inline-block; text-align:left; background:#0a1220; border:1px solid var(--border); border-radius:10px; padding:8px 14px; margin-top:8px; font-size:12.5px; color:var(--text); }
+  .boxScore b{ color:var(--accent-soft); }
 </style>
 </head>
 <body>
@@ -171,7 +186,7 @@
   <div id="screen-mode" class="screen active">
     <div class="panel">
       <h1>HOOP LEGENDS</h1>
-      <p class="story">Two ways to play. Rise from rookie to Finals MVP, or run a franchise to a title.</p>
+      <p class="story">Three ways to play. Rise from rookie to Finals MVP, run a franchise to a title, or go head-to-head with a friend.</p>
       <div class="row" style="gap:14px;">
         <div class="teamPick" id="modeJourney" style="width:200px;">
           <h2 style="border:none;text-align:center;margin:6px 0;color:var(--accent-soft)">🏀 MY JOURNEY</h2>
@@ -192,7 +207,12 @@
         <button class="diffBtn sel" data-d="medium">MEDIUM</button>
         <button class="diffBtn" data-d="hard">HARD</button>
       </div>
-      <div class="row"><button id="btnLoadGame" class="small ghost">Load Saved Game</button></div>
+      <div class="row">
+        <button id="btnContinue" class="small" style="display:none">Continue ▶</button>
+        <button id="btnLoadGame" class="small ghost">Load Saved Game</button>
+        <button id="btnMuteMenu" class="small ghost">🔊 Sound On</button>
+      </div>
+      <p class="small-txt" style="margin-top:4px">Progress auto-saves after every game.</p>
     </div>
   </div>
 
@@ -275,7 +295,7 @@
           <p><b>Player:</b> <span id="hubPlayerName"></span> (<span id="hubPos"></span>)</p>
           <p><b>Level:</b> <span id="hubLevel"></span> &nbsp; <b>XP:</b> <span id="hubXP"></span></p>
           <p><b>Season Record:</b> <span id="hubRecord"></span></p>
-          <p><b>Round:</b> <span id="hubRound"></span></p>
+          <p><b>Round:</b> <span id="hubRound"></span> &nbsp; <b>Next:</b> <span id="hubOpp"></span></p>
           <p><b>Skill Points:</b> <span id="hubSP" style="color:var(--success)"></span></p>
         </div>
         <div id="hubBadges"><b>Badges:</b><br/><div id="hubBadgeList"></div></div>
@@ -290,6 +310,7 @@
         <button id="btnHubSave" class="small ghost">Save</button>
         <button id="btnHubMenu" class="small ghost">Menu</button></div>
       <div class="flashMsg" id="hubMsg"></div>
+      <div id="hubBox"></div>
     </div>
   </div>
 
@@ -331,6 +352,7 @@
             <button id="btnFrMenu" class="small ghost">Menu</button>
           </div>
           <div class="flashMsg" id="frMsg"></div>
+          <div id="frBox"></div>
         </div>
       </div>
     </div>
@@ -395,9 +417,23 @@
       </div>
       <div id="pauseOverlay" style="display:none;position:absolute;inset:0;background:rgba(6,10,18,.82);border-radius:10px;align-items:center;justify-content:center;flex-direction:column;">
         <h1 style="font-size:34px;">PAUSED</h1>
+        <p class="small-txt" style="max-width:520px;line-height:1.8">
+          <b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> hold &amp; release in the green to shoot (jump/block on D)<br/>
+          <b>X</b> pass · call for the ball · steal &nbsp;·&nbsp; <b>C</b> special (dunk near rim / crossover / lockdown)<br/>
+          <b>1/2/3</b> plays: iso · pick &amp; roll · fast break &nbsp;·&nbsp; <b>M</b> mute &nbsp;·&nbsp; <b>Esc/P</b> pause
+        </p>
         <div class="row"><button id="btnResume">Resume ▶</button></div>
         <div class="row"><button id="btnQuitMenu" class="ghost">Quit to Menu</button></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ SAVE / LOAD MODAL (replaces prompt(), which portals block) ============ -->
+  <div id="slotModal" class="modalWrap">
+    <div class="panel" style="max-width:440px;">
+      <h1 id="slotModalTitle" style="font-size:30px;">SAVE</h1>
+      <div id="slotModalBody"></div>
+      <div class="row"><button id="slotModalCancel" class="small ghost">Cancel</button></div>
     </div>
   </div>
 
@@ -421,8 +457,20 @@
    AUDIO ENGINE (Web Audio API - synthesized 8-bit SFX)
 ========================================================================= */
 const Audio8 = (function(){
-  let ctx=null;
-  function ac(){ if(!ctx){ ctx = new (window.AudioContext||window.webkitAudioContext)(); } return ctx; }
+  let ctx=null, master=null;
+  let startMuted=false;
+  try{ startMuted = localStorage.getItem('hoopLegendsMuted')==='1'; }catch(e){}
+  function ac(){
+    if(!ctx){
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = startMuted ? 0 : 1;
+      master.connect(ctx.destination);
+    }
+    return ctx;
+  }
+  // every sound routes through one master gain so MUTE silences SFX + music together
+  function out(){ ac(); return master; }
   function beep(freq, dur, type, vol, slideTo){
     try{
       const c = ac();
@@ -433,14 +481,14 @@ const Audio8 = (function(){
       if(slideTo) o.frequency.linearRampToValueAtTime(slideTo, c.currentTime+dur);
       g.gain.setValueAtTime(vol||0.15, c.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+dur);
-      o.connect(g); g.connect(c.destination);
+      o.connect(g); g.connect(out());
       o.start(); o.stop(c.currentTime+dur);
     }catch(e){}
   }
   function noise(dur, vol, filterFreq){
     try{
       const c = ac();
-      const bufferSize = c.sampleRate*dur;
+      const bufferSize = Math.floor(c.sampleRate*dur);
       const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
       const data = buffer.getChannelData(0);
       for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
@@ -451,7 +499,7 @@ const Audio8 = (function(){
       const g = c.createGain();
       g.gain.setValueAtTime(vol||0.2, c.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+dur);
-      src.connect(filt); filt.connect(g); g.connect(c.destination);
+      src.connect(filt); filt.connect(g); g.connect(out());
       src.start(); src.stop(c.currentTime+dur);
     }catch(e){}
   }
@@ -472,21 +520,21 @@ const Audio8 = (function(){
     cheer(big){
       try{
         const c=ac(); const dur=big?1.1:0.6;
-        const bufferSize=c.sampleRate*dur;
+        const bufferSize=Math.floor(c.sampleRate*dur);
         const buffer=c.createBuffer(1,bufferSize,c.sampleRate);
         const data=buffer.getChannelData(0);
         for(let i=0;i<bufferSize;i++){ const env=Math.sin(Math.PI*i/bufferSize); data[i]=(Math.random()*2-1)*env; }
         const src=c.createBufferSource(); src.buffer=buffer;
         const filt=c.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=big?1100:900; filt.Q.value=0.6;
         const g=c.createGain(); g.gain.value=big?0.22:0.13;
-        src.connect(filt); filt.connect(g); g.connect(c.destination);
+        src.connect(filt); filt.connect(g); g.connect(out());
         src.start(); src.stop(c.currentTime+dur);
       }catch(e){}
     },
     buzzerBeater(){ this.cheer(true); this.buzzer(); setTimeout(()=>this.badge(),150); },
     ensureRunning(){ try{ ac().resume(); }catch(e){} },
     // ---- original synthesized background loop ----
-    _music:null, _muted:false, _timer:null, _step:0,
+    _music:null, _muted:startMuted, _timer:null, _step:0,
     startMusic(){
       const self=this;
       if(self._timer) return;
@@ -497,21 +545,21 @@ const Audio8 = (function(){
       let step=0;
       const beat=0.32;
       function tick(){
-        if(self._muted){ return; }
+        if(self._muted || c.state!=='running'){ return; }
         const t=c.currentTime;
         const bi=step%8;
         // bass
         const bo=c.createOscillator(), bg=c.createGain();
         bo.type='triangle'; bo.frequency.value=bass[bi];
         bg.gain.setValueAtTime(0.10,t); bg.gain.exponentialRampToValueAtTime(0.001,t+beat*0.9);
-        bo.connect(bg); bg.connect(c.destination); bo.start(t); bo.stop(t+beat);
+        bo.connect(bg); bg.connect(out()); bo.start(t); bo.stop(t+beat);
         // arp note
         const chord=arp[(step>>1)%4];
         const note=chord[step%3];
         const ao=c.createOscillator(), ag=c.createGain();
         ao.type='square'; ao.frequency.value=note;
         ag.gain.setValueAtTime(0.045,t); ag.gain.exponentialRampToValueAtTime(0.001,t+beat*0.7);
-        ao.connect(ag); ag.connect(c.destination); ao.start(t); ao.stop(t+beat*0.8);
+        ao.connect(ag); ag.connect(out()); ao.start(t); ao.stop(t+beat*0.8);
         // light hat every other step
         if(step%2===0) noise(0.03,0.03,7000);
         step++;
@@ -520,7 +568,12 @@ const Audio8 = (function(){
       tick();
     },
     stopMusic(){ if(this._timer){ clearInterval(this._timer); this._timer=null; } },
-    toggleMute(){ this._muted=!this._muted; return this._muted; }
+    toggleMute(){
+      this._muted=!this._muted;
+      try{ ac(); master.gain.setValueAtTime(this._muted?0:1, ctx.currentTime); }catch(e){}
+      try{ localStorage.setItem('hoopLegendsMuted', this._muted?'1':'0'); }catch(e){}
+      return this._muted;
+    }
   };
 })();
 
@@ -612,10 +665,11 @@ function freshState(){
       name:"Rookie", position:"Guard", heightIn:75,
       attrs:{ shooting:5, passing:5, speed:5, defense:5 },
       level:1, xp:0, xpToNext:100, sp:0,
-      badges:[]
+      badges:[],
+      skinIdx:0, hairIdx:0, hairStyle:'headband', jerseyNum:23
     },
     team: null,
-    season:{ wins:0, losses:0, round:0 },
+    season:{ wins:0, losses:0, round:0, oppIdx:null },
     sponsor:null,
     spMultiplierNextGame:1
   };
@@ -686,7 +740,7 @@ function renderTeamRow(){
     `;
     card.onclick = ()=>{
       Audio8.click();
-      document.querySelectorAll('.teamPick').forEach(c=>c.classList.remove('sel'));
+      row.querySelectorAll('.teamPick').forEach(c=>c.classList.remove('sel'));
       card.classList.add('sel');
       chosenTeamIdx = i;
       if(typeof renderLookPreview==='function') renderLookPreview();
@@ -752,9 +806,27 @@ renderTeamRow();
 ========================================================================= */
 document.getElementById('modeJourney').addEventListener('click', ()=>{
   Audio8.ensureRunning(); Audio8.startMusic(); Audio8.click();
+  resetCreation();
   S.mode='journey';
   showScreen('screen-create');
 });
+// wipe any leftover player from a previous Franchise / Versus / Journey run so the
+// creator always starts clean (otherwise attribute points could be over-spent)
+function resetCreation(){
+  const keepDiff = S.difficulty;
+  S = freshState();
+  S.mode='journey'; S.difficulty=keepDiff;
+  attrPoints = 10; chosenPos = null; chosenTeamIdx = null;
+  document.getElementById('playerName').value = 'Rookie';
+  document.getElementById('heightSlider').value = 75;
+  document.getElementById('heightLabel').textContent = heightLabelStr(75);
+  document.getElementById('jerseyNumInput').value = 23;
+  document.getElementById('ptsLeft').textContent = `(${attrPoints} points left)`;
+  document.getElementById('createMsg').textContent = '';
+  document.querySelectorAll('#posRow .posCard').forEach(c=>c.classList.remove('sel'));
+  renderAttrEditor(); renderTeamRow();
+  renderSkinRow(); renderHairColorRow(); renderHairStyleRow(); renderLookPreview();
+}
 document.getElementById('modeFranchise').addEventListener('click', ()=>{
   Audio8.ensureRunning(); Audio8.startMusic(); Audio8.click();
   S.mode='franchise';
@@ -803,15 +875,36 @@ function teamOverall(roster){
 function newFranchise(teamIdx){
   const standings = TEAMS.map((t,i)=>({ idx:i, w:0, l:0, pf:0, pa:0 }));
   const rosters = TEAMS.map((t,i)=> makeRoster(62 + ((i*11)%15)));  // varied team strengths (62-76)
-  const sched = [];
-  for(let rep=0; rep<2; rep++){
-    for(let j=0;j<TEAMS.length;j++){ if(j!==teamIdx) sched.push(j); }
-  }
-  for(let i=sched.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); [sched[i],sched[k]]=[sched[k],sched[i]]; }
+  // double round-robin (circle method). With 7 teams every round has one bye, so
+  // every team — not just yours — plays exactly 12 games and the standings are fair.
+  const once = buildRounds(TEAMS.length);
+  for(let i=once.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); [once[i],once[k]]=[once[k],once[i]]; }
+  const rounds = once.concat(once.map(r=>r.map(([a,b])=>[b,a])));
+  const sched = [], userRounds = [];
+  rounds.forEach((pairs,ri)=>{
+    const g = pairs.find(pr=>pr.includes(teamIdx));
+    if(g){ sched.push(g[0]===teamIdx?g[1]:g[0]); userRounds.push(ri); }
+  });
   // each team owns its own next-2-drafts' 1st round picks to start; these can be traded
   const picks = [];
   TEAMS.forEach((t,i)=>{ picks.push({yearsOut:1, ownerIdx:i, origTeamIdx:i}); picks.push({yearsOut:2, ownerIdx:i, origTeamIdx:i}); });
-  return { teamIdx, standings, rosters, sched, gameIdx:0, phase:'season', playoff:null, champion:null, season:1, picks };
+  return { teamIdx, standings, rosters, sched, rounds, userRounds, roundIdx:0, gameIdx:0, phase:'season', playoff:null, champion:null, season:1, picks };
+}
+function buildRounds(n){
+  const ids=[...Array(n).keys()]; if(n%2) ids.push(-1);   // -1 = bye
+  const m=ids.length, rounds=[];
+  let arr=ids.slice();
+  for(let r=0;r<m-1;r++){
+    const pairs=[];
+    for(let i=0;i<m/2;i++){ const a=arr[i], b=arr[m-1-i]; if(a>=0&&b>=0) pairs.push(r%2?[b,a]:[a,b]); }
+    rounds.push(pairs);
+    arr=[arr[0], arr[m-1], ...arr.slice(1,m-1)];
+  }
+  return rounds;
+}
+function winPct(s){ const g=s.w+s.l; return g? s.w/g : 0; }
+function sortStandings(st){
+  return st.standings.slice().sort((a,b)=> (winPct(b)-winPct(a)) || (b.w-a.w) || ((b.pf-b.pa)-(a.pf-a.pa)));
 }
 // a pick's trade value tracks how weak the ORIGINAL team currently is (bad teams' picks are worth more),
 // discounted a bit for picks further out
@@ -834,8 +927,9 @@ function teamPower(idx){
 }
 function simGame(aIdx,bIdx){
   const pa=teamPower(aIdx), pb=teamPower(bIdx);
-  const sa=Math.round(74 + (pa-60)*0.9 + Math.random()*22);
-  const sb=Math.round(74 + (pb-60)*0.9 + Math.random()*22);
+  // scaled to match the scoring of a played game (four 1-minute quarters)
+  const sa=Math.round(26 + (pa-60)*0.45 + Math.random()*12);
+  const sb=Math.round(26 + (pb-60)*0.45 + Math.random()*12);
   let A=sa,B=sb; if(A===B){ Math.random()<0.5?A++:B++; }
   return { a:A, b:B, aWin:A>B };
 }
@@ -844,7 +938,13 @@ function recordResult(st, aIdx, bIdx, aScore, bScore){
   A.pf+=aScore; A.pa+=bScore; Bo.pf+=bScore; Bo.pa+=aScore;
   if(aScore>bScore){ A.w++; Bo.l++; } else { A.l++; Bo.w++; }
 }
-// sim one game for the other teams each time your team plays, to keep standings live
+function simRound(st, ri, skipIdx){
+  st.rounds[ri].forEach(([a,b])=>{
+    if(a===skipIdx||b===skipIdx) return;
+    const r=simGame(a,b); recordResult(st, a, b, r.a, r.b);
+  });
+}
+// legacy (pre round-robin saves): sim one game for the other teams each time your team plays
 function simOtherGames(st){
   const others = TEAMS.map((t,i)=>i).filter(i=>i!==st.teamIdx && i!==st.sched[st.gameIdx]);
   for(let i=0;i+1<others.length;i+=2){
@@ -860,17 +960,18 @@ function renderFranchise(){
   }
   document.getElementById('frTitle').textContent = `FRANCHISE HQ — ${myTeam.name.toUpperCase()}`;
 
-  // standings table sorted by wins
-  const sorted = fr.standings.slice().sort((a,b)=> (b.w-a.w) || ((b.pf-b.pa)-(a.pf-a.pa)));
+  // standings table sorted by win %
+  const sorted = sortStandings(fr);
   let html='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
-    '<tr style="color:var(--text-dim);text-align:left"><th>#</th><th>Team</th><th>W</th><th>L</th><th>Diff</th></tr>';
+    '<tr style="color:var(--text-dim);text-align:left"><th>#</th><th>Team</th><th>W</th><th>L</th><th>Diff</th><th>OVR</th></tr>';
   sorted.forEach((s,rank)=>{
     const t=TEAMS[s.idx];
     const me = s.idx===fr.teamIdx;
     const diff=s.pf-s.pa;
     html+=`<tr style="${me?'background:#12324a;color:var(--accent-soft);font-weight:700':''}">`+
       `<td>${rank+1}</td><td><span style="display:inline-block;width:10px;height:10px;background:${t.primary};border-radius:2px;margin-right:5px"></span>${t.abbr}</td>`+
-      `<td>${s.w}</td><td>${s.l}</td><td>${diff>0?'+':''}${diff}</td></tr>`;
+      `<td>${s.w}</td><td>${s.l}</td><td>${diff>0?'+':''}${diff}</td><td>${Math.round(teamPower(s.idx))}</td></tr>`;
+    if(rank===3 && fr.phase==='season') html+='<tr><td colspan="6" style="border-top:1px dashed var(--accent);font-size:10px;color:var(--text-dim);padding:0">playoff line</td></tr>';
   });
   html+='</table>';
   document.getElementById('frStandings').innerHTML=html;
@@ -879,21 +980,23 @@ function renderFranchise(){
   const playBtn=document.getElementById('btnFrPlay'), simBtn=document.getElementById('btnFrSim'), weekBtn=document.getElementById('btnFrSimWeek');
   if(fr.phase==='season'){
     const oppIdx=fr.sched[fr.gameIdx];
-    document.getElementById('frStatus').textContent = `Regular season — game ${fr.gameIdx+1} of ${fr.sched.length}. Play your games or sim to the playoffs.`;
+    document.getElementById('frStatus').textContent = `Season ${fr.season||1} — game ${fr.gameIdx+1} of ${fr.sched.length}. Top 4 make the playoffs.`;
     nextBox.innerHTML = `<p><b>Game ${fr.gameIdx+1}/${fr.sched.length}</b></p>
-      <p style="font-size:14px"><span style="color:${myTeam.primary}">${myTeam.abbr}</span> vs <span style="color:${TEAMS[oppIdx].primary}">${TEAMS[oppIdx].name}</span></p>`;
+      <p style="font-size:14px"><span style="color:${myTeam.secondary}">${myTeam.abbr} (${Math.round(teamPower(fr.teamIdx))})</span> vs <span style="color:${TEAMS[oppIdx].secondary}">${TEAMS[oppIdx].name} (${Math.round(teamPower(oppIdx))})</span></p>`;
     playBtn.style.display=''; simBtn.style.display=''; weekBtn.style.display='';
   } else if(fr.phase==='playoffs'){
     const rd=fr.playoff;
     document.getElementById('frStatus').textContent = `Playoffs — ${rd.roundName}. Win to advance.`;
     if(rd.userOut){
-      nextBox.innerHTML=`<p style="color:var(--danger)">Your season is over — eliminated in the ${rd.roundName}.</p>`;
+      nextBox.innerHTML = rd.missed
+        ? `<p style="color:var(--danger)">You missed the playoffs this year.</p>`
+        : `<p style="color:var(--danger)">Your season is over — eliminated in the ${rd.roundName}.</p>`;
       playBtn.style.display='none'; simBtn.style.display='none'; weekBtn.style.display='none';
     } else if(fr.champion!==null){
       // handled below
     } else {
       nextBox.innerHTML = `<p><b>${rd.roundName}</b></p>
-        <p style="font-size:14px"><span style="color:${myTeam.primary}">${myTeam.abbr}</span> vs <span style="color:${TEAMS[rd.oppIdx].primary}">${TEAMS[rd.oppIdx].name}</span></p>`;
+        <p style="font-size:14px"><span style="color:${myTeam.secondary}">${myTeam.abbr} (${Math.round(teamPower(fr.teamIdx))})</span> vs <span style="color:${TEAMS[rd.oppIdx].secondary}">${TEAMS[rd.oppIdx].name} (${Math.round(teamPower(rd.oppIdx))})</span></p>`;
       playBtn.style.display=''; simBtn.style.display=''; weekBtn.style.display='none';
     }
   }
@@ -901,7 +1004,8 @@ function renderFranchise(){
     document.getElementById('frStatus').textContent = fr.champion===fr.teamIdx
       ? `🏆 The ${myTeam.name} are CHAMPIONS! What a season.`
       : `Season over. ${TEAMS[fr.champion].name} took the title. There's always next year.`;
-    nextBox.innerHTML = `<div class="row"><button id="btnFrNewSeason">Offseason → Rookie Draft</button></div>`;
+    if(!(fr.playoff && fr.playoff.userOut)) nextBox.innerHTML = '';
+    nextBox.innerHTML += `<div class="row"><button id="btnFrNewSeason">Offseason → Rookie Draft</button></div>`;
     document.getElementById('btnFrNewSeason').onclick=()=>{ Audio8.click();
       // develop existing players, then hold the rookie draft before next season tips off
       developRosters();
@@ -915,27 +1019,36 @@ function frAdvanceAfterGame(userWon, myScore, oppScore){
   const fr=S.franchise;
   if(fr.phase==='season'){
     const oppIdx=fr.sched[fr.gameIdx];
-    recordResult(fr, fr.teamIdx, oppIdx, myScore, oppScore);
-    simOtherGames(fr);
+    if(fr.rounds){
+      const r=fr.userRounds[fr.gameIdx];
+      while(fr.roundIdx<r){ simRound(fr, fr.roundIdx, -99); fr.roundIdx++; }   // rounds where you had a bye
+      recordResult(fr, fr.teamIdx, oppIdx, myScore, oppScore);
+      simRound(fr, r, fr.teamIdx);
+      fr.roundIdx=r+1;
+    } else {
+      recordResult(fr, fr.teamIdx, oppIdx, myScore, oppScore);
+      simOtherGames(fr);
+    }
     fr.gameIdx++;
-    if(fr.gameIdx>=fr.sched.length) startFrPlayoffs();
+    if(fr.gameIdx>=fr.sched.length){
+      if(fr.rounds) while(fr.roundIdx<fr.rounds.length){ simRound(fr, fr.roundIdx, -99); fr.roundIdx++; }
+      startFrPlayoffs();
+    }
   } else if(fr.phase==='playoffs'){
     const rd=fr.playoff;
+    if(fr.champion!==null || rd.userOut) return;
     if(userWon){
       rd.wins=(rd.wins||0)+1;
       advancePlayoffRound(true);
     } else {
       rd.userOut=true;
-      // sim remaining bracket to a champion (someone else)
       finishBracketWithoutUser();
     }
   }
 }
 
 function seedPlayoffs(){
-  const fr=S.franchise;
-  const sorted=fr.standings.slice().sort((a,b)=>(b.w-a.w)||((b.pf-b.pa)-(a.pf-a.pa)));
-  return sorted.slice(0,4).map(s=>s.idx); // top 4 seeds
+  return sortStandings(S.franchise).slice(0,4).map(s=>s.idx); // top 4 seeds
 }
 function startFrPlayoffs(){
   const fr=S.franchise;
@@ -944,7 +1057,7 @@ function startFrPlayoffs(){
   const userSeed = seeds.indexOf(fr.teamIdx);
   if(userSeed<0){
     // missed the playoffs — sim a champion
-    fr.playoff={ roundName:'Playoffs', userOut:true };
+    fr.playoff={ roundName:'Playoffs', userOut:true, missed:true };
     const champ=simBracket(seeds);
     fr.champion=champ;
     return;
@@ -987,10 +1100,19 @@ function simBracket(seeds){
   const r2=simGame(seeds[1],seeds[2]).aWin?seeds[1]:seeds[2];
   return simGame(r1,r2).aWin?r1:r2;
 }
+// you were knocked out: the team that beat you advances — you can never be crowned
 function finishBracketWithoutUser(){
   const fr=S.franchise;
-  const seeds=fr.bracket||seedPlayoffs();
-  fr.champion=simBracket(seeds);
+  const beatUs = fr.playoff.oppIdx;
+  if(fr.roundName==='Semifinals'){
+    const seeds=fr.bracket, us=fr.teamIdx;
+    const pairA=[seeds[0],seeds[3]], pairB=[seeds[1],seeds[2]];
+    const otherPair = pairA.includes(us) ? pairB : pairA;
+    const other = simGame(otherPair[0], otherPair[1]).aWin ? otherPair[0] : otherPair[1];
+    fr.champion = simGame(beatUs, other).aWin ? beatUs : other;
+  } else {
+    fr.champion = beatUs;
+  }
 }
 
 document.getElementById('btnFrStart').addEventListener('click', ()=>{
@@ -999,8 +1121,12 @@ document.getElementById('btnFrStart').addEventListener('click', ()=>{
   S.team=TEAMS[frChosenIdx];
   // franchise uses a generated star player you control (team's floor general)
   S.player = { name:'Your Star', position:'Guard', heightIn:76,
-    attrs:{ shooting:7, passing:7, speed:7, defense:6 }, level:1, xp:0, xpToNext:100, sp:0, badges:[] };
+    attrs:{ shooting:7, passing:7, speed:7, defense:6 }, level:1, xp:0, xpToNext:100, sp:0, badges:[],
+    skinIdx:Math.floor(Math.random()*SKINS.length), hairIdx:Math.floor(Math.random()*HAIRS.length), hairStyle:'headband', jerseyNum:1 };
+  S.sponsor=null; S.spMultiplierNextGame=1; S.season={ wins:0, losses:0, round:0, oppIdx:null };
   S.franchise=newFranchise(frChosenIdx);
+  document.getElementById('frMsg').textContent=''; document.getElementById('frBox').innerHTML='';
+  autoSave();
   renderFranchise();
   showScreen('screen-franchise');
 });
@@ -1040,9 +1166,16 @@ document.getElementById('diffRow').addEventListener('click', (e)=>{
   const b=e.target.closest('.diffBtn'); if(!b) return;
   Audio8.click();
   S.difficulty=b.dataset.d;
-  document.querySelectorAll('.diffBtn').forEach(x=>x.classList.remove('sel'));
-  b.classList.add('sel');
+  syncDiffButtons();
 });
+function syncDiffButtons(){
+  document.querySelectorAll('.diffBtn').forEach(x=>x.classList.toggle('sel', x.dataset.d===S.difficulty));
+}
+function syncMuteButton(){
+  document.getElementById('btnMuteMenu').textContent = Audio8._muted ? '🔇 Sound Off' : '🔊 Sound On';
+}
+document.getElementById('btnMuteMenu').addEventListener('click', ()=>{ Audio8.ensureRunning(); Audio8.toggleMute(); syncMuteButton(); Audio8.click(); });
+syncMuteButton();
 document.getElementById('modeVersus').addEventListener('click', ()=>{
   Audio8.ensureRunning(); Audio8.startMusic(); Audio8.click();
   S.mode='versus';
@@ -1070,7 +1203,9 @@ document.getElementById('btnVsStart').addEventListener('click', ()=>{
   if(vsP1Idx===vsP2Idx){ document.getElementById('vsSetupMsg').textContent='Players need different teams!'; return; }
   S.team=TEAMS[vsP1Idx];
   S.versusP2Idx=vsP2Idx;
-  S.player={ name:'P1', position:'Guard', heightIn:75, attrs:{shooting:6,passing:6,speed:6,defense:6}, level:1, xp:0, xpToNext:100, sp:0, badges:[] };
+  S.player={ name:'P1', position:'Guard', heightIn:75, attrs:{shooting:6,passing:6,speed:6,defense:6}, level:1, xp:0, xpToNext:100, sp:0, badges:[],
+    skinIdx:0, hairIdx:0, hairStyle:'headband', jerseyNum:1 };
+  S.sponsor=null;
   startGame();
 });
 
@@ -1082,7 +1217,7 @@ function serializeState(){
   // strip the runtime function from the sponsor before saving
   const spon = S.sponsor ? { id:S.sponsor.id, done:S.sponsor.done } : null;
   return JSON.stringify({
-    mode:S.mode, player:S.player, team:S.team?TEAMS.indexOf(S.team):null,
+    mode:S.mode, difficulty:S.difficulty, player:S.player, team:S.team?TEAMS.indexOf(S.team):null,
     season:S.season, sponsorId:spon, spMult:S.spMultiplierNextGame,
     franchise:S.franchise||null
   });
@@ -1090,41 +1225,82 @@ function serializeState(){
 function deserializeState(str){
   const d=JSON.parse(str);
   S.mode=d.mode; S.player=d.player;
+  if(d.difficulty && DIFF[d.difficulty]){ S.difficulty=d.difficulty; syncDiffButtons(); }
   S.team = d.team!=null ? TEAMS[d.team] : null;
-  S.season=d.season||{wins:0,losses:0,round:0};
+  S.season=d.season||{wins:0,losses:0,round:0,oppIdx:null};
   S.spMultiplierNextGame=d.spMult||1;
   S.franchise=d.franchise||null;
   // rebuild sponsor from its saved id
   S.sponsor = d.sponsorId ? rebuildSponsor(d.sponsorId.id, d.sponsorId.done) : null;
 }
 function doSave(slot){
+  if(S.mode!=='journey' && S.mode!=='franchise') return;
   const saves=readSaves();
-  saves['slot'+slot]={ when:Date.now(), label:(S.mode==='franchise'?'Franchise':'Journey')+' · '+(S.team?S.team.abbr:'—'), data:serializeState() };
+  const extra = S.mode==='franchise' && S.franchise ? ` · S${S.franchise.season||1}` : (S.player ? ` · ${S.player.name} Lv${S.player.level}` : '');
+  saves['slot'+slot]={ when:Date.now(), label:(S.mode==='franchise'?'Franchise':'Journey')+' · '+(S.team?S.team.abbr:'—')+extra, data:serializeState() };
   writeSaves(saves);
 }
+// silent autosave after each game / season step so progress is never lost
+function autoSave(){ try{ doSave('Auto'); refreshContinue(); }catch(e){} }
 function slotSummary(slot){
   const s=readSaves()['slot'+slot];
   if(!s) return 'Empty';
   const d=new Date(s.when);
   return `${s.label} · ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
 }
+function refreshContinue(){
+  const has = !!readSaves()['slotAuto'];
+  document.getElementById('btnContinue').style.display = has ? '' : 'none';
+}
 
-// simple prompt-based save/load UI so it stays a single file with no extra screens
+// in-page slot picker (prompt()/alert() are blocked inside most portal iframes)
+function openSlotModal(kind, onPick){
+  const modal=document.getElementById('slotModal'), body=document.getElementById('slotModalBody');
+  document.getElementById('slotModalTitle').textContent = kind==='save' ? 'SAVE GAME' : 'LOAD GAME';
+  const slots = kind==='save' ? [1,2,3] : ['Auto',1,2,3];
+  body.innerHTML='';
+  slots.forEach(n=>{
+    const b=document.createElement('button');
+    b.className='slotBtn' + (kind==='load' && !readSaves()['slot'+n] ? '' : '');
+    const empty = !readSaves()['slot'+n];
+    b.textContent = `${n==='Auto'?'Autosave':'Slot '+n} — ${slotSummary(n)}`;
+    if(kind==='load' && empty) b.disabled=true;
+    b.onclick=()=>{ Audio8.click(); closeSlotModal(); onPick(n); };
+    body.appendChild(b);
+  });
+  modal.classList.add('open');
+}
+function closeSlotModal(){ document.getElementById('slotModal').classList.remove('open'); }
+document.getElementById('slotModalCancel').addEventListener('click', ()=>{ Audio8.click(); closeSlotModal(); });
+
+function flash(id, text, color){
+  const el=document.getElementById(id); if(!el) return;
+  el.style.color = color||''; el.textContent=text;
+}
 function openSaveMenu(){
-  const which = prompt(`SAVE — choose a slot (1-3):\n 1) ${slotSummary(1)}\n 2) ${slotSummary(2)}\n 3) ${slotSummary(3)}`, '1');
-  const n=parseInt(which); if(n>=1&&n<=3){ doSave(n); document.getElementById('hubMsg') && (document.getElementById('hubMsg').textContent=`Saved to slot ${n}.`); if(document.getElementById('frMsg')) document.getElementById('frMsg').textContent=`Saved to slot ${n}.`; }
+  openSlotModal('save', n=>{
+    doSave(n);
+    flash(S.mode==='franchise'?'frMsg':'hubMsg', `Saved to slot ${n}.`);
+  });
 }
-function openLoadMenu(){
-  const which = prompt(`LOAD — choose a slot (1-3):\n 1) ${slotSummary(1)}\n 2) ${slotSummary(2)}\n 3) ${slotSummary(3)}`, '1');
-  const n=parseInt(which); if(!(n>=1&&n<=3)) return;
+function loadSlot(n){
   const s=readSaves()['slot'+n];
-  if(!s){ alert('That slot is empty.'); return; }
-  deserializeState(s.data);
+  if(!s) return;
+  try{ deserializeState(s.data); }catch(e){ flash('hubMsg','That save could not be read.','var(--danger)'); return; }
   Audio8.ensureRunning(); Audio8.startMusic();
-  if(S.mode==='franchise'){ renderFranchise(); showScreen('screen-franchise'); }
-  else { renderHub(); showScreen('screen-hub'); }
+  document.getElementById('hubBox').innerHTML=''; document.getElementById('frBox').innerHTML='';
+  if(S.mode==='franchise'){
+    const fr=S.franchise;
+    flash('frMsg','');
+    // a save made mid-draft resumes the draft
+    if(fr && fr.draft && fr.champion!==null){ draftSel=null; renderDraft(); showScreen('screen-draft'); return; }
+    renderFranchise(); showScreen('screen-franchise');
+  }
+  else { flash('hubMsg',''); renderHub(); showScreen('screen-hub'); }
 }
+function openLoadMenu(){ openSlotModal('load', loadSlot); }
 document.getElementById('btnLoadGame').addEventListener('click', ()=>{ Audio8.click(); openLoadMenu(); });
+document.getElementById('btnContinue').addEventListener('click', ()=>{ Audio8.click(); loadSlot('Auto'); });
 
 /* ---------------- Franchise: roster, trades, development ---------------- */
 let rosSelMine=null, rosSelOther=null, rosOtherIdx=null, rosSelMinePick=null, rosSelOtherPick=null;
@@ -1157,12 +1333,13 @@ function renderRoster(){
 
   // opponent selector
   const sel=document.getElementById('rosTeamSel');
-  if(!sel.dataset.filled){
+  if(sel.dataset.forTeam!==String(fr.teamIdx)){
     sel.innerHTML='';
     TEAMS.forEach((t,i)=>{ if(i!==fr.teamIdx){ const o=document.createElement('option'); o.value=i; o.textContent=t.name; sel.appendChild(o);} });
-    sel.dataset.filled='1';
-    sel.onchange=()=>{ rosOtherIdx=parseInt(sel.value); renderOtherRoster(); };
+    sel.dataset.forTeam=String(fr.teamIdx);
+    rosOtherIdx=null;
   }
+  sel.onchange=()=>{ rosOtherIdx=parseInt(sel.value); rosSelOther=null; rosSelOtherPick=null; renderOtherRoster(); };
   rosOtherIdx = rosOtherIdx!=null && rosOtherIdx!==fr.teamIdx ? rosOtherIdx : TEAMS.findIndex((t,i)=>i!==fr.teamIdx);
   sel.value=rosOtherIdx;
   renderOtherRoster();
@@ -1251,17 +1428,18 @@ function developRosters(){
 
 // hub + franchise menu/save buttons
 document.getElementById('btnHubSave').addEventListener('click', ()=>{ Audio8.click(); openSaveMenu(); });
-document.getElementById('btnHubMenu').addEventListener('click', ()=>{ Audio8.click(); showScreen('screen-mode'); });
+document.getElementById('btnHubMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
 document.getElementById('btnFrSave').addEventListener('click', ()=>{ Audio8.click(); openSaveMenu(); });
-document.getElementById('btnFrMenu').addEventListener('click', ()=>{ Audio8.click(); showScreen('screen-mode'); });
+document.getElementById('btnFrMenu').addEventListener('click', ()=>{ Audio8.click(); goMenu(); });
+function goMenu(){ refreshContinue(); syncMuteButton(); showScreen('screen-mode'); }
 
 /* ---------------- Franchise: end-of-season ROOKIE DRAFT (worst picks first) ---------------- */
-let draftSel=null;
+let draftSel=null, draftTimer=null;
 function startDraft(){
   const fr=S.franchise;
   // draft order = reverse standings (worst record picks first), honoring any traded picks —
   // whoever now OWNS a team's imminent (yearsOut:1) 1st rounder makes that pick instead
-  const order = fr.standings.slice().sort((a,b)=> (a.w-b.w) || ((a.pf-a.pa)-(b.pf-b.pa))).map(s=>{
+  const order = sortStandings(fr).reverse().map(s=>{
     const pk = fr.picks.find(p=>p.origTeamIdx===s.idx && p.yearsOut===1);
     return pk ? pk.ownerIdx : s.idx;
   });
@@ -1275,6 +1453,7 @@ function startDraft(){
   prospects.sort((a,b)=>b.ovr-a.ovr);
   fr.draft = { order, pick:0, prospects, picks:[] };
   draftSel=null;
+  autoSave();
   renderDraft();
   showScreen('screen-draft');
 }
@@ -1306,8 +1485,8 @@ function renderDraft(){
   document.getElementById('btnDraftDone').style.display = done ? '' : 'none';
 
   // if it's not the user's turn (and draft not done), auto-advance AI picks
-  if(!done && !userTurn){
-    setTimeout(()=>{ aiDraftPick(); }, 350);
+  if(!done && !userTurn && !draftTimer){
+    draftTimer = setTimeout(()=>{ draftTimer=null; aiDraftPick(); }, 350);
   }
 }
 function assignRookie(teamIdx, prospectIdx){
@@ -1334,6 +1513,8 @@ document.getElementById('btnDraftPick').addEventListener('click', ()=>{
   Audio8.click();
   const fr=S.franchise, d=fr.draft;
   if(draftSel==null){ document.getElementById('draftMsg').textContent='Select a prospect first.'; return; }
+  if(d.order[d.pick % d.order.length]!==fr.teamIdx || d.pick>=d.order.length) return;
+  document.getElementById('draftMsg').textContent='';
   assignRookie(fr.teamIdx, draftSel);
   draftSel=null;
   Audio8.badge();
@@ -1341,6 +1522,8 @@ document.getElementById('btnDraftPick').addEventListener('click', ()=>{
 });
 document.getElementById('btnDraftAuto').addEventListener('click', ()=>{
   Audio8.click();
+  const d=S.franchise.draft;
+  if(d.order[d.pick % d.order.length]!==S.franchise.teamIdx || d.pick>=d.order.length) return;
   assignRookie(S.franchise.teamIdx, 0);
   draftSel=null;
   renderDraft();
@@ -1354,6 +1537,9 @@ document.getElementById('btnDraftDone').addEventListener('click', ()=>{
   TEAMS.forEach((t,i)=> carriedPicks.push({yearsOut:2, ownerIdx:i, origTeamIdx:i}));
   S.franchise=newFranchise(fr.teamIdx);
   S.franchise.rosters=keptRosters; S.franchise.season=nextSeason; S.franchise.picks=carriedPicks;
+  flash('frMsg', `Season ${nextSeason} begins. New rookies are on the floor.`, 'var(--success)');
+  document.getElementById('frBox').innerHTML='';
+  autoSave();
   renderFranchise();
   showScreen('screen-franchise');
 });
@@ -1376,7 +1562,15 @@ function renderHub(){
   document.getElementById('hubLevel').textContent = S.player.level;
   document.getElementById('hubXP').textContent = `${S.player.xp} / ${S.player.xpToNext}`;
   document.getElementById('hubRecord').textContent = `${S.season.wins}W - ${S.season.losses}L`;
-  document.getElementById('hubRound').textContent = ROUND_NAMES[S.season.round];
+  document.getElementById('hubRound').textContent = ROUND_NAMES[Math.min(S.season.round,2)];
+  // pick (and remember) the next opponent so the hub can show who you're facing
+  const myIdx = TEAMS.indexOf(S.team);
+  if(S.season.oppIdx==null || S.season.oppIdx===myIdx || !TEAMS[S.season.oppIdx]){
+    const pool = TEAMS.map((t,i)=>i).filter(i=>i!==myIdx);
+    S.season.oppIdx = pool[Math.floor(Math.random()*pool.length)];
+  }
+  const opp = TEAMS[S.season.oppIdx];
+  document.getElementById('hubOpp').innerHTML = `<span style="color:${opp.secondary};font-weight:700">${opp.name}</span>`;
   document.getElementById('hubSP').textContent = S.player.sp;
 
   const badgeList = document.getElementById('hubBadgeList');
@@ -1390,7 +1584,8 @@ function renderHub(){
 
   const sBox = document.getElementById('sponsorBox');
   if(!S.sponsor){ S.sponsor = generateSponsorOffer(); }
-  sBox.innerHTML = `<b>📣 Sponsor Deal:</b> ${S.sponsor.text}<br/><span class="small-txt">${S.sponsor.done ? '✅ Completed! Bonus applied next game.' : 'Pending — complete it during your next game.'}</span>`;
+  const multNote = S.spMultiplierNextGame>1 ? `<br/><span class="small-txt" style="color:var(--success)">Active bonus: ${S.spMultiplierNextGame}x SP on level-ups this game.</span>` : '';
+  sBox.innerHTML = `<b>📣 Sponsor Deal:</b> ${S.sponsor.text}<br/><span class="small-txt">${S.sponsor.done ? '✅ Completed! Bonus applied next game.' : 'Pending — complete it during your next game.'}</span>${multNote}`;
 
   const grid = document.getElementById('upgradeGrid');
   grid.innerHTML='';
@@ -1441,14 +1636,17 @@ function rebuildSponsor(id, done){
 }
 
 document.getElementById('btnPlayGame').addEventListener('click', ()=>{
-  Audio8.ensureRunning();
+  Audio8.ensureRunning(); Audio8.startMusic();
   Audio8.click();
-  startGame();
+  startGame(S.season.oppIdx!=null ? TEAMS[S.season.oppIdx] : null);
 });
 document.getElementById('btnPostChamp').addEventListener('click', ()=>{
   Audio8.click();
-  if(S.mode==='versus'){ showScreen('screen-mode'); return; }
-  S.season = { wins:0, losses:0, round:0 };
+  if(S.mode==='versus'){ goMenu(); return; }
+  S.season = { wins:0, losses:0, round:0, oppIdx:null };
+  autoSave();
+  document.getElementById('hubBox').innerHTML='';
+  flash('hubMsg', `New season! Your ${S.player.level>1?'Level '+S.player.level+' ':''}baller is back for another title run.`);
   renderHub();
   showScreen('screen-hub');
 });
@@ -1653,7 +1851,7 @@ const DIGITS = {
    GAMEPLAY — Hoop Land-style side angle: horizontal court, camera pans left/right
 ========================================================================= */
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
 const COURT = {
@@ -1669,13 +1867,23 @@ const ZOOM = 540/WORLD_H;  // scale so the whole vertical composition fits & we 
 const SC = 4; // sprite pixel scale
 
 const KEYS = {};
+function inGame(){ return Game && !Game.over && document.getElementById('screen-game').classList.contains('active'); }
+function typingInField(e){ const t=e.target; return t && (t.tagName==='INPUT' || t.tagName==='SELECT' || t.tagName==='TEXTAREA'); }
 window.addEventListener('keydown', e=>{
+  // never hijack keys while the player is typing a name / jersey number
+  if(typingInField(e)) return;
   KEYS[e.code]=true;
-  if(e.code==='KeyM'){ const m=Audio8.toggleMute(); if(Game) Game.muted=m; }
-  if((e.code==='Escape'||e.code==='KeyP') && Game && !Game.over){ togglePause(); }
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if(e.code==='KeyM' && !e.repeat){ Audio8.ensureRunning(); Audio8.toggleMute(); syncMuteButton(); }
+  if((e.code==='Escape'||e.code==='KeyP') && !e.repeat && inGame()){ togglePause(); }
+  // only swallow game keys during a match (so menus still scroll / sliders still work)
+  if(inGame() && ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Slash','Period'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e=>{ KEYS[e.code]=false; });
+// releasing every key when the window loses focus prevents "stuck" movement
+window.addEventListener('blur', ()=>{ for(const k in KEYS) KEYS[k]=false; });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && inGame() && !Game.paused) togglePause(true); });
+// one-shot press detection (a held key only fires once)
+function pressed(code, store){ const down=!!KEYS[code]; const was=!!store[code]; store[code]=down; return down && !was; }
 
 /* on-screen touch controls (phones / Poki mobile) — drive the same KEYS map
    the keyboard uses so no gameplay code needs to know the difference */
@@ -1732,7 +1940,7 @@ window.addEventListener('keyup', e=>{ KEYS[e.code]=false; });
 let Game = null;
 
 function togglePause(force){
-  if(!Game) return;
+  if(!Game || Game.over) return;
   Game.paused = force!=null ? force : !Game.paused;
   document.getElementById('pauseOverlay').style.display = Game.paused ? 'flex' : 'none';
   if(Game.paused){ Platform.gameplayStop(); }
@@ -1742,12 +1950,16 @@ document.getElementById('btnPause').addEventListener('click', ()=>{ Audio8.click
 document.getElementById('btnResume').addEventListener('click', ()=>{ Audio8.click(); togglePause(false); });
 document.getElementById('btnQuitMenu').addEventListener('click', ()=>{
   Audio8.click();
-  if(Game) Game.over = true;   // stop the loop
-  togglePause(false);
-  showScreen('screen-mode');
+  document.getElementById('pauseOverlay').style.display='none';
+  if(Game){ Game.paused=false; Game.over = true; }   // stop the loop (game is not recorded)
+  Platform.gameplayStop();
+  if(S.mode==='journey'){ renderHub(); flash('hubMsg','Game abandoned — it did not count.','var(--text-dim)'); showScreen('screen-hub'); }
+  else if(S.mode==='franchise'){ renderFranchise(); flash('frMsg','Game abandoned — it did not count.','var(--text-dim)'); showScreen('screen-franchise'); }
+  else goMenu();
 });
 
 const ROLES = ['PG','SG','SF','PF','C'];
+const QUARTER_LEN = 60, OT_LEN = 30;
 // slots: horizontal distance back from the attacking hoop + vertical offset from hoop line
 const SLOTS = {
   PG:{ dist:380, yOff:0 },
@@ -1780,11 +1992,19 @@ function makePlayer(opts){
 }
 
 function attackingHoopX(team){ return team==='home' ? COURT.hoopRightX : COURT.hoopLeftX; }
+// skill rating of an AI player's team (1 = average)
+function teamRating(team){ return team==='home' ? (Game.homeSkill||1) : (Game.awaySkill||1); }
+// difficulty knobs only apply to the CPU opponent (never to your teammates or to Player 2)
+function cpuCfg(team, key){ if(Game.versus || team==='home' || !Game.diffCfg) return 1; return Game.diffCfg[key]; }
 
 function startGame(forcedOpponent){
   Audio8.ensureRunning();
-  const round = S.season.round;
+  // a focused menu button would otherwise be "clicked" again by the Space bar
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  for(const k in KEYS) KEYS[k]=false;
+  const round = Math.min(S.season.round, 2);
   const versus = S.mode==='versus';
+  const franchise = S.mode==='franchise';
   let opponent;
   if(forcedOpponent){ opponent = forcedOpponent; }
   else if(versus){ opponent = TEAMS[S.versusP2Idx]; }
@@ -1792,14 +2012,24 @@ function startGame(forcedOpponent){
     const oppTeams = TEAMS.filter(t=>t.name!==S.team.name);
     opponent = oppTeams[Math.floor(Math.random()*oppTeams.length)];
   }
-  const diff = versus ? 1.0 : S.mode==='franchise' ? 1.15 : 1 + round*0.18;
+  // team skill ratings (1.0 = average). Your AI teammates are NOT boosted by the
+  // difficulty setting — only the CPU opponent is. In Franchise, roster OVR matters.
+  let homeSkill = 1, awaySkill = 1;
+  if(franchise){
+    const my = teamPower(S.franchise.teamIdx), op = teamPower(TEAMS.indexOf(opponent));
+    homeSkill = Math.max(0.8, Math.min(1.25, 1 + (my-70)/45));
+    awaySkill = Math.max(0.8, Math.min(1.3, 1 + (op-70)/45 + (S.franchise.phase==='playoffs'?0.06:0)));
+  } else if(!versus){
+    awaySkill = 1 + round*0.12;          // each playoff round is tougher
+  }
+  const diff = versus ? 1.0 : awaySkill;
 
   const home=[], away=[];
   // home attacks the RIGHT hoop; away attacks the LEFT hoop
   const user = makePlayer({
     isUser:true, team:'home', role:'PG',
     x: COURT.hoopRightX - SLOTS.PG.dist, y: COURT.hoopY,
-    scale: heightScale(),
+    scale: versus ? 1 : heightScale(),
     hairStyle: S.player.hairStyle || 'headband',
     skinIdx: S.player.skinIdx!=null ? S.player.skinIdx : 0,
     hairIdx: S.player.hairIdx!=null ? S.player.hairIdx : 0,
@@ -1818,15 +2048,17 @@ function startGame(forcedOpponent){
     const mark = home[i];
     away.push(makePlayer({
       team:'away', role:ROLES[i],
-      x: mark.x + 130, y: mark.y + 25,
+      x: mark.x + 90, y: mark.y + 20,
       aiTimer: 2 // no instant steal rolls at tip-off
     }));
   }
+  // unique jersey numbers within each team
+  [home,away].forEach(tm=>{ const used=new Set(); tm.forEach(p=>{ while(used.has(p.jerseyNum)) p.jerseyNum=(p.jerseyNum+7)%100; used.add(p.jerseyNum); }); });
   // in local versus, Player 2 controls the away team's point guard
   let user2 = null;
   if(versus){
     user2 = away[0];
-    user2.isUser2 = true;
+    user2.isUser2 = true; user2.scale = 1;
     user2.hairStyle='headband'; user2.sprites = buildSprite({ headband:true });
   }
 
@@ -1834,52 +2066,70 @@ function startGame(forcedOpponent){
     home, away, all: home.concat(away),
     teamHome: S.team, teamAway: opponent,
     versus, user, user2,
+    homeSkill, awaySkill,
     ball:{ x:user.x, y:user.y, h:30, holder:user, inAir:false, loose:false,
            arcT:0, arcDur:0, sx:0, sy:0, tx:0, ty:0, made:false, isThree:false,
            shooter:null, vx:0, vy:0, vh:0, snap:true },
-    camX: 0,
+    camX: Math.max(0, user.x - 600),
     stamina: 100, stamina2: 100,
     special: 0, special2: 0,        // dunk/crossover charge meters
-    quarter:1, quarterTime:60,
+    quarter:1, quarterTime:QUARTER_LEN, overtime:0,
     shotClock: 24,
     scoreHome:0, scoreAway:0,
     foulsHome:0, foulsAway:0,
     diff,
     diffCfg: DIFF[S.difficulty] || DIFF.medium,
     paused:false,
-    stats:{ points:0, rebounds:0, assists:0, steals:0, blocks:0 },
+    stats:{ points:0, rebounds:0, assists:0, steals:0, blocks:0, fgm:0, fga:0, tpm:0, tpa:0, ftm:0, fta:0, to:0 },
     shotMeter:{ active:false, t:0, holding:false },
     shotMeter2:{ active:false, t:0, holding:false },
     shotPopup:null, shotPopup2:null,
     freeThrow:null,               // active free-throw sequence
     playbook:null, playbookTimer:0,
-    banner:null,
+    banner:{ text:`TIP-OFF — vs ${opponent.abbr}`, t:1.4 },
     floatTexts:[],
     phase:'live', inbounder:null, inboundTargetX:0,
     pendingAssist:null,
     lastFrame: performance.now(),
     over:false,
+    keys1:{}, keys2:{},
     xPressed:false, x2Pressed:false, ePressed:false, e2Pressed:false,
     pbPressed:false,
     lastMoveDirX:0, ankleApplied:false, dirChangeTimer:0,
     shakeT:0, shakeMag:0, shakeDur:0, userStreak:0
   };
+  Game.loopId = (startGame._loop = (startGame._loop||0)+1);
+  // swallow the Space press that may still be held from the menu click
+  Game.keys1.Space = true; Game.keys2.Slash = true;
   attachBall(user);
+  buildCourtCache();
+  document.getElementById('pauseOverlay').style.display='none';
   showScreen('screen-game');
   Platform.gameplayStart();
-  requestAnimationFrame(gameLoop);
+  const id = Game.loopId;
+  requestAnimationFrame(t=>gameLoop(t, id));
 }
 
 function attachBall(p, smooth){
   const b = Game.ball;
-  const prev = b.holder;
-  b.holder = p; b.inAir = false; b.loose = false; b.rest = false;
+  const prev = b.holder || (b.passing ? b.passFrom : null) || b.lastTeamPlayer || null;
+  b.holder = p; b.inAir = false; b.loose = false; b.rest = false; b.passing = false;
   b.snap = !smooth;            // ground pickups ease in; passes/steals snap to hand
   b.side = undefined;          // reset the smoothed hand-side offset
   Game.all.forEach(pl=>pl.hasBall=false);
   p.hasBall = true;
-  // reset the shot clock whenever possession changes teams
-  if(Game && (!prev || prev.team!==p.team)) Game.shotClock = 24;
+  b.lastTeamPlayer = p;
+  // reset the shot clock when possession changes teams, or after the ball hit the rim
+  if(!prev || prev.team!==p.team || b.hitRim){
+    Game.shotClock = 24;
+    if(prev && prev.team!==p.team) Game.pendingAssist = null;
+  }
+  b.hitRim = false;
+  // a shot meter can never carry over to a new possession
+  if(!p.isUser){ Game.shotMeter.active=false; Game.shotMeter.holding=false; }
+  if(!p.isUser2){ Game.shotMeter2.active=false; Game.shotMeter2.holding=false; }
+  // AI handlers take a beat before acting, so catches don't become instant re-passes
+  if(!p.isUser && !p.isUser2) p.aiTimer = Math.max(p.aiTimer, 0.35 + Math.random()*0.3);
 }
 
 /* start a visible ball-in-flight travel between two players (pass / inbound throw) */
@@ -1888,14 +2138,15 @@ function startPass(from, to, opts){
   const b = Game.ball;
   b.holder = null; from.hasBall = false;
   b.inAir = false; b.loose = false; b.rest = false;
-  b.passing = true; b.passDeflected = false;
+  b.passing = true; b.passDeflected = !!opts.safe;   // inbound passes can't be picked off
   b.passTeam = from.team;
   b.passFrom = from; b.passTo = to;
   b.psx = b.x; b.psy = b.y;
   b.ptx = to.x; b.pty = to.y;
   const d = Math.hypot(b.ptx-b.psx, b.pty-b.psy);
-  b.passDur = opts.dur || Math.max(0.14, Math.min(0.5, d/900));
+  b.passDur = opts.dur || Math.max(0.16, Math.min(0.55, d/950));
   b.passT = 0;
+  from.facing = to.x>=from.x ? 1 : -1;
 }
 
 function dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
@@ -1906,21 +2157,28 @@ function clampP(p, allowOOB){
 }
 
 /* ---------------- game loop ---------------- */
-function gameLoop(now){
-  if(!Game || Game.over) return;
+function gameLoop(now, id){
+  if(!Game || Game.over || id!==Game.loopId) return;   // only one loop ever runs
   let dt = (now - Game.lastFrame)/1000;
-  dt = Math.min(dt, 0.05);
+  dt = Math.max(0, Math.min(dt, 0.05));
   Game.lastFrame = now;
   update(dt);
+  if(Game.over) return;
   render();
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(t=>gameLoop(t, id));
 }
 
 function update(dt){
   if(Game.paused) return;   // frozen while the pause menu is open
   if(Game.banner){ Game.banner.t-=dt; if(Game.banner.t<=0) Game.banner=null; }
   // free throws freeze normal play
-  if(Game.freeThrow){ updateFreeThrow(dt); updateFloatTexts(dt); return; }
+  if(Game.freeThrow){ updateFreeThrow(dt); updateFloatTexts(dt); updateCamera(dt); return; }
+  // short dead-ball pause at the end of a quarter
+  if(Game.breakT>0){
+    Game.breakT-=dt; updateFloatTexts(dt); updateCamera(dt);
+    if(Game.breakT<=0) startPeriod();
+    return;
+  }
   updateInput(dt);
   if(Game.versus) updateInput2(dt);
   updateAI(dt);
@@ -1938,17 +2196,44 @@ function update(dt){
 function updatePoses(dt){
   Game.all.forEach(p=>{ if(p.shootPose>0) p.shootPose-=dt; });
 }
+// shared jump physics for human players (AI players use the same in updateAI)
+function stepJump(p, dt){
+  if(!p.jumping) return;
+  p.jumpVel -= 720*dt;
+  p.jumpH += p.jumpVel*dt;
+  if(p.jumpH<=0){ p.jumpH=0; p.jumping=false; }
+}
+// a human defender in the air near the shot gets ONE block roll per shot
+function tryHumanBlock(p, defAttr, bigReach){
+  const b = Game.ball;
+  if(!b.inAir || !b.shooter || b.shooter.team===p.team || b.blockedThisShot || b.dunk) return;
+  if(p.jumpH<25 || b.arcT>0.55) return;
+  b.blockRolled = b.blockRolled || new Set();
+  if(b.blockRolled.has(p)) return;
+  const d = Math.hypot(b.x-p.x, b.y-p.y);
+  const reach = bigReach ? 95 : 65;
+  if(d>reach) return;
+  b.blockRolled.add(p);
+  const chance = 0.30 + defAttr*0.03 + (bigReach?0.12:0);
+  if(Math.random()<chance){
+    blockShot(p);
+    if(p.isUser){ Game.stats.blocks++; gainXP(12); chargeSpecial(p.team, 15); buzz(35); checkSponsor(); }
+  }
+}
 
 function updateShotClock(dt){
   if(Game.phase!=='live') return;
+  const b = Game.ball;
+  // the shot clock only runs while a team actually has the ball (not during a
+  // shot in flight or a loose-ball scramble)
+  if(!b.holder && !b.passing) return;
   Game.shotClock -= dt;
   if(Game.shotClock<=0){
-    // shot-clock violation → turnover to the other team
-    const off = Game.ball.holder ? Game.ball.holder.team : 'home';
+    const off = b.holder ? b.holder.team : b.passTeam;
     Audio8.buzzer();
-    addFloat(Game.ball.x, Game.ball.y-80, "SHOT CLOCK!", '#ff5577', 20);
-    const other = off==='home' ? Game.away : Game.home;
-    attachBall(other[0]);
+    addFloat(b.x, b.y-80, "SHOT CLOCK VIOLATION", '#ff5577', 18);
+    if(off==='home') Game.stats.to++;
+    startInbound(off);                 // turnover: the other team inbounds
     Game.shotClock = 24;
   }
 }
@@ -1958,24 +2243,41 @@ function updatePlaybook(dt){
 }
 
 function updateClock(dt){
-  Game.quarterTime -= dt;
-  if(Game.quarterTime<=0){
-    if(Game.quarter<4){
-      Game.quarter++;
-      Game.quarterTime = 60;
-      Game.foulsHome=0; Game.foulsAway=0; // team fouls reset each quarter
-      Audio8.buzzer();
-      Game.banner={ text:`END OF Q${Game.quarter-1}`, t:1.6 };
-    } else {
-      endGame();
-    }
-  }
+  if(Game.quarterTime>0) Game.quarterTime -= dt;
+  if(Game.quarterTime>0) return;
+  Game.quarterTime = 0;
+  const b = Game.ball;
+  // let a shot (or pass) already in the air finish — that's how buzzer-beaters happen
+  if(b.inAir || b.passing) return;
+  const regulationOver = Game.quarter>=4;
+  if(regulationOver && Game.scoreHome!==Game.scoreAway){ endGame(); return; }
+  Audio8.buzzer();
+  const label = Game.quarter<4 ? `END OF Q${Game.quarter}` : (Game.quarter===4 ? 'TIED! OVERTIME' : 'STILL TIED! ANOTHER OT');
+  Game.banner={ text:label, t:1.6 };
+  Game.breakT = 1.6;
 }
+// start the next quarter / overtime: reset fouls, alternate possession with a baseline inbound
+function startPeriod(){
+  Game.quarter++;
+  Game.quarterTime = Game.quarter>4 ? OT_LEN : QUARTER_LEN;
+  Game.foulsHome=0; Game.foulsAway=0;
+  Game.shotMeter.active=false; Game.shotMeter2.active=false;
+  // alternating possession: away inbounds Q2/Q4, home Q3, OT alternates
+  const homeBall = Game.quarter%2===1;
+  startInbound(homeBall ? 'away' : 'home');
+  Game.shotClock = 24;
+}
+function periodLabel(){ return Game.quarter<=4 ? `Q${Game.quarter}` : (Game.quarter===5 ? 'OT' : `${Game.quarter-4}OT`); }
 
 /* ---------------- input (sprint + stamina) ---------------- */
 function updateInput(dt){
   const user = Game.home[0];
-  if(user.stunTimer>0){ user.stunTimer-=dt; return; }
+  const K = Game.keys1;
+  const shootTap = pressed('Space', K);
+  const passTap  = pressed('KeyX', K);
+  const specTap  = pressed('KeyC', K);
+  stepJump(user, dt);
+  if(user.stunTimer>0){ user.stunTimer-=dt; user.moving=false; Game.shotMeter.active=false; return; }
 
   // playbook calls (offense only) — 1 iso, 2 pick & roll, 3 fast break
   if(user.hasBall && !Game.pbPressed){
@@ -1986,8 +2288,7 @@ function updateInput(dt){
   if(!KEYS['Digit1']&&!KEYS['Digit2']&&!KEYS['Digit3']) Game.pbPressed=false;
 
   // special move (C): dunk if near rim with ball, crossover if guarded, steal-swipe on D
-  if(KEYS['KeyC'] && !Game.ePressed){ Game.ePressed=true; useSpecial(user, 1); }
-  if(!KEYS['KeyC']) Game.ePressed=false;
+  if(specTap) useSpecial(user, 1);
 
   let dx=0, dy=0;
   const arrows = !Game.versus;   // in versus the arrows belong to Player 2
@@ -1996,13 +2297,16 @@ function updateInput(dt){
   if(KEYS['KeyW']||(arrows&&KEYS['ArrowUp'])) dy-=1;
   if(KEYS['KeyS']||(arrows&&KEYS['ArrowDown'])) dy+=1;
 
-  user.moving = (dx!==0||dy!==0);
-  const wantSprint = KEYS['ShiftLeft'] && user.moving && Game.stamina>2;
+  // you can't run while gathering for a jump shot
+  const gathering = Game.shotMeter.active;
+  user.moving = (dx!==0||dy!==0) && !gathering;
+  const wantSprint = (KEYS['ShiftLeft']||(!Game.versus&&KEYS['ShiftRight'])) && user.moving && Game.stamina>2;
   if(wantSprint){ Game.stamina = Math.max(0, Game.stamina - 30*dt); }
   else { Game.stamina = Math.min(100, Game.stamina + 16*dt); }
   const sprintMult = wantSprint ? 1.55 : 1;
 
-  const spd = (150 + (S.player.attrs.speed + heightSpdBonus())*14) * sprintMult;
+  const spdAttr = Game.versus ? 6 : (S.player.attrs.speed + heightSpdBonus());
+  const spd = (150 + spdAttr*14) * sprintMult * (user.hasBall ? 0.94 : 1);
   if(user.moving){
     const len = Math.hypot(dx,dy);
     user.x += (dx/len)*spd*dt;
@@ -2019,7 +2323,7 @@ function updateInput(dt){
   // Ankle Breaker badge
   if(Game.dirChangeTimer>0){
     Game.dirChangeTimer-=dt;
-    if(S.player.badges.includes('speed') && !Game.ankleApplied){
+    if(!Game.versus && user.hasBall && S.player.badges.includes('speed') && !Game.ankleApplied){
       Game.away.forEach(def=>{
         if(dist2(def,user)<80*80){ def.stunTimer=0.8; addFloat(def.x, def.y-90, "ANKLE BROKEN!", '#ff5577', 15); }
       });
@@ -2032,48 +2336,37 @@ function updateInput(dt){
     if(user.dribbleSnd<=0){ Audio8.dribble(); user.dribbleSnd = wantSprint?0.22:0.3; }
   }
 
-  if(user.hasBall){
-    if(KEYS['Space'] && !Game.shotMeter.active){
+  const canAct = Game.phase==='live' || Game.inbounder!==user;
+  if(user.hasBall && canAct){
+    if(shootTap && !Game.shotMeter.active){
       Game.shotMeter.active=true; Game.shotMeter.t=0; Game.shotMeter.holding=true;
-      Audio8.shotRelease();
+      user.shootPose = 0.2;
+      Audio8.squeak();
     }
     if(Game.shotMeter.active && Game.shotMeter.holding){
-      Game.shotMeter.t += dt*1.6;
-      if(Game.shotMeter.t>1) Game.shotMeter.t = 1-(Game.shotMeter.t-1);
-      if(!KEYS['Space']){
+      Game.shotMeter.t += dt*1.5;
+      if(Game.shotMeter.t>=1){ Game.shotMeter.t=1; }        // hold too long = late release
+      user.shootPose = Math.max(user.shootPose, 0.1);
+      if(!KEYS['Space'] || Game.shotMeter.t>=1){
         Game.shotMeter.holding=false;
         Game.shotMeter.active=false;
         releaseShot(user, Math.max(0,Math.min(1,Game.shotMeter.t)));
       }
     }
   } else {
-    if(KEYS['Space'] && !user.jumping){
-      user.jumping=true; user.jumpVel=230; Audio8.squeak();
+    Game.shotMeter.active=false; Game.shotMeter.holding=false;
+    if(shootTap && !user.jumping && !user.hasBall){
+      user.jumping=true; user.jumpVel=250; Audio8.squeak();
     }
   }
   if(user.jumping){
-    user.jumpVel -= 720*dt;
-    user.jumpH += user.jumpVel*dt;
-    if(user.jumpH<=0){ user.jumpH=0; user.jumping=false; }
-    const b = Game.ball;
-    if(b.inAir && b.shooter && b.shooter.team!=='home' && user.jumpH>30){
-      const d = Math.hypot(b.x-user.x, b.y-user.y);
-      const reach = S.player.badges.includes('defense') ? 90 : 60;
-      if(d<reach && Math.random()<0.5 && !b.blockedThisShot){
-        b.made=false; b.blockedThisShot=true;
-        Game.stats.blocks++; gainXP(12);
-        Audio8.block();
-        addFloat(user.x, user.y-100, "BLOCKED!", '#4ade80', 18);
-        screenShake(8, 0.3);
-        buzz(35);
-      }
-    }
+    const defAttr = Game.versus ? 6 : S.player.attrs.defense + heightDefBonus();
+    tryHumanBlock(user, defAttr, !Game.versus && S.player.badges.includes('defense'));
   }
 
-  if(KEYS['KeyX'] && !Game.xPressed){
-    Game.xPressed=true;
-    if(user.hasBall) doPass(user);
-    else if(Game.ball.holder && Game.ball.holder.team===user.team){
+  if(passTap){
+    if(user.hasBall){ if(canAct) doPass(user); }
+    else if(Game.ball.holder && Game.ball.holder.team===user.team && Game.phase==='live'){
       // off-ball: call for the pass — the AI handler swings it to you
       Game.ball.holder.aiTimer = 0;
       doPass(Game.ball.holder, user);
@@ -2081,91 +2374,103 @@ function updateInput(dt){
     }
     else attemptSteal(user);
   }
-  if(!KEYS['KeyX']) Game.xPressed=false;
 }
 
 /* ---------------- Player 2 input (local versus) ---------------- */
 function updateInput2(dt){
   const u = Game.user2;
   if(!u) return;
-  if(u.stunTimer>0){ u.stunTimer-=dt; return; }
+  const K = Game.keys2;
+  const shootTap = pressed('Slash', K);
+  const passTap  = pressed('Period', K);
+  const specTap  = pressed('ControlRight', K);
+  stepJump(u, dt);
+  if(u.stunTimer>0){ u.stunTimer-=dt; u.moving=false; Game.shotMeter2.active=false; return; }
 
-  // special move (RightCtrl)
-  if(KEYS['ControlRight'] && !Game.e2Pressed){ Game.e2Pressed=true; useSpecial(u, 2); }
-  if(!KEYS['ControlRight']) Game.e2Pressed=false;
+  if(specTap) useSpecial(u, 2);
 
   let dx=0,dy=0;
   if(KEYS['ArrowLeft']) dx-=1;
   if(KEYS['ArrowRight']) dx+=1;
   if(KEYS['ArrowUp']) dy-=1;
   if(KEYS['ArrowDown']) dy+=1;
-  u.moving=(dx!==0||dy!==0);
+  u.moving=(dx!==0||dy!==0) && !Game.shotMeter2.active;
   const wantSprint = KEYS['ShiftRight'] && u.moving && Game.stamina2>2;
   if(wantSprint) Game.stamina2=Math.max(0,Game.stamina2-30*dt);
   else Game.stamina2=Math.min(100,Game.stamina2+16*dt);
-  const spd=(150+6*14)*(wantSprint?1.55:1);
+  const spd=(150+6*14)*(wantSprint?1.55:1)*(u.hasBall?0.94:1);
   if(u.moving){
     const len=Math.hypot(dx,dy);
     u.x+=(dx/len)*spd*dt; u.y+=(dy/len)*spd*dt;
     if(dx!==0) u.facing=dx>0?1:-1;
     u.animT+=dt*(wantSprint?13:9);
+    if(u.hasBall){ u.dribbleSnd=(u.dribbleSnd||0)-dt; if(u.dribbleSnd<=0){ Audio8.dribble(); u.dribbleSnd=wantSprint?0.22:0.3; } }
   }
   clampP(u, Game.phase==='inbound' && Game.inbounder===u);
 
-  if(u.hasBall){
-    if(KEYS['Slash'] && !Game.shotMeter2.active){ Game.shotMeter2.active=true; Game.shotMeter2.t=0; Game.shotMeter2.holding=true; Audio8.shotRelease(); }
+  const canAct = Game.phase==='live' || Game.inbounder!==u;
+  if(u.hasBall && canAct){
+    if(shootTap && !Game.shotMeter2.active){ Game.shotMeter2.active=true; Game.shotMeter2.t=0; Game.shotMeter2.holding=true; Audio8.squeak(); }
     if(Game.shotMeter2.active && Game.shotMeter2.holding){
-      Game.shotMeter2.t += dt*1.6;
-      if(Game.shotMeter2.t>1) Game.shotMeter2.t = 1-(Game.shotMeter2.t-1);
-      if(!KEYS['Slash']){
+      Game.shotMeter2.t += dt*1.5;
+      if(Game.shotMeter2.t>=1) Game.shotMeter2.t=1;
+      u.shootPose = Math.max(u.shootPose, 0.1);
+      if(!KEYS['Slash'] || Game.shotMeter2.t>=1){
         Game.shotMeter2.holding=false; Game.shotMeter2.active=false;
         releaseShot(u, Math.max(0,Math.min(1,Game.shotMeter2.t)));
       }
     }
-  } else if(KEYS['Slash'] && !u.jumping){
-    u.jumping=true; u.jumpVel=230; Audio8.squeak();
+  } else {
+    Game.shotMeter2.active=false; Game.shotMeter2.holding=false;
+    if(shootTap && !u.jumping && !u.hasBall){ u.jumping=true; u.jumpVel=250; Audio8.squeak(); }
   }
-  if(u.jumping){
-    u.jumpVel-=720*dt; u.jumpH+=u.jumpVel*dt;
-    if(u.jumpH<=0){ u.jumpH=0; u.jumping=false; }
+  if(u.jumping) tryHumanBlock(u, 6, false);
+  if(passTap){
+    if(u.hasBall){ if(canAct) doPass(u); }
+    else if(Game.ball.holder && Game.ball.holder.team===u.team && Game.phase==='live'){
+      Game.ball.holder.aiTimer=0; doPass(Game.ball.holder, u);
+      addFloat(u.x, u.y-88, "GIVE IT!", '#22d3ee', 13);
+    }
+    else attemptStealBy(u);
   }
-  if(KEYS['Period'] && !Game.x2Pressed){
-    Game.x2Pressed=true;
-    if(u.hasBall) doPass(u); else attemptStealBy(u);
-  }
-  if(!KEYS['Period']) Game.x2Pressed=false;
 }
 
 /* ---------------- special moves: dunk + crossover ---------------- */
 function chargeSpecial(who, amt){
-  if(who==='home'){ if(Game.versus||true) Game.special=Math.min(100,Game.special+amt); }
+  if(who==='home') Game.special=Math.min(100,Game.special+amt);
   else Game.special2=Math.min(100,Game.special2+amt);
 }
 function useSpecial(u, who){
   const meter = who===1 ? Game.special : Game.special2;
-  if(meter < 100) { addFloat(u.x,u.y-90,"CHARGING…",'#8fa0b8',13); return; }
+  if(meter < 100) { addFloat(u.x,u.y-90,`CHARGING ${Math.floor(meter)}%`,'#8fa0b8',13); return; }
+  if(Game.phase!=='live' && u.hasBall) return;
   const hx = attackingHoopX(u.team);
   if(u.hasBall){
     const dRim = Math.hypot(u.x-hx, u.y-COURT.hoopY);
     if(dRim < 230){
       // POSTER DUNK — guaranteed bucket with flair
-      const b=Game.ball; b.inAir=true; b.holder=null; u.hasBall=false; b.blockedThisShot=false;
-      u.shootPose=0.6; b.shooter=u; b.made=true; b.isThree=false;
-      b.sx=u.x; b.sy=u.y; b.tx=hx; b.ty=COURT.hoopY; b.arcT=0; b.arcDur=0.5;
+      const b=Game.ball; b.inAir=true; b.holder=null; u.hasBall=false;
+      b.blockedThisShot=false; b.blockRolled=null; b.blockBy=null; b.fouled=false;
+      u.shootPose=0.6; u.jumping=true; u.jumpVel=300; u.jumpH=Math.max(u.jumpH,1);
+      b.shooter=u; b.made=true; b.isThree=false; b.layup=true; b.dunk=true;
+      b.sx=u.x; b.sy=u.y; b.tx=hx; b.ty=COURT.hoopY; b.arcT=0; b.arcDur=0.45;
+      if(u.isUser){ Game.stats.fga++; }
       addFloat(u.x,u.y-100,"💥 POSTER DUNK!",'#ffd166',20);
       Audio8.shotRelease();
+      screenShake(5,0.2);
     } else {
       // CROSSOVER — juke: stun the nearest defender and burst forward
       const defs = u.team==='home'?Game.away:Game.home;
       let near=null,nd=Infinity; defs.forEach(df=>{ const d=dist2(df,u); if(d<nd){nd=d;near=df;} });
-      if(near){ near.stunTimer=1.0; addFloat(near.x,near.y-90,"BROKEN!",'#ff5577',16); }
+      if(near && nd<160*160){ near.stunTimer=1.0; addFloat(near.x,near.y-90,"BROKEN!",'#ff5577',16); }
       u.x += (u.team==='home'?1:-1)*70;
+      clampP(u);
       addFloat(u.x,u.y-90,"CROSSOVER!",'#22d3ee',16);
       Audio8.squeak();
     }
   } else {
     // on defense: a lockdown swipe with a big steal radius
-    attemptStealBy(u, 0.9);
+    if(!attemptStealBy(u, 0.9)) return;   // keep the meter if nobody was in range
   }
   if(who===1) Game.special=0; else Game.special2=0;
 }
@@ -2180,54 +2485,82 @@ function callPlaybook(kind){
 }
 
 /* ---------------- fouls & free throws ---------------- */
-function commitFoul(offenseTeam, shooter, wasShooting){
+function commitFoul(offenseTeam, shooter, wasShooting, fouler){
   const defTeam = offenseTeam==='home'?'away':'home';
   if(defTeam==='home') Game.foulsHome++; else Game.foulsAway++;
-  addFloat(shooter.x, shooter.y-90, "FOUL!", '#ffd166', 16);
+  addFloat(fouler?fouler.x:shooter.x, (fouler?fouler.y:shooter.y)-90, "FOUL!", '#ffd166', 16);
   Audio8.buzzer();
+  Game.shotMeter.active=false; Game.shotMeter2.active=false;
   const teamFouls = defTeam==='home'?Game.foulsHome:Game.foulsAway;
-  // shooting foul, or bonus after 5 team fouls → free throws
-  if(wasShooting || teamFouls>=5){
-    startFreeThrows(shooter, wasShooting? (Math.hypot(shooter.x-attackingHoopX(offenseTeam),shooter.y-COURT.hoopY)>330?3:2) : 2);
+  // non-shooting foul in the bonus (5+ team fouls in the quarter) → 2 free throws
+  if(!wasShooting && teamFouls>=5){
+    Game.banner={ text:'BONUS — 2 FREE THROWS', t:1.1 };
+    startFreeThrows(shooter, 2);
   }
+  return teamFouls;
 }
 function startFreeThrows(shooter, count){
-  Game.freeThrow = { shooter, remaining:count, meter:0, dir:1, state:'aim', timer:0 };
-  Game.ball.holder=null; Game.ball.inAir=false; Game.ball.loose=false;
-  Game.ball.x=shooter.x; Game.ball.y=shooter.y; Game.ball.h=40;
+  const hx = attackingHoopX(shooter.team);
+  const dir = hx < COURT.W/2 ? 1 : -1;
+  // everybody resets: shooter at the line, others along the lane
+  shooter.x = hx + dir*230; shooter.y = COURT.hoopY;
+  shooter.jumpH=0; shooter.jumping=false; shooter.moving=false; shooter.facing=-dir;
+  Game.freeThrow = { shooter, remaining:count, total:count, meter:0, dir:1, state:'aim', timer:0, keys:{ Space:true, Slash:true } };
+  const b=Game.ball;
+  b.holder=null; b.inAir=false; b.loose=false; b.rest=false; b.passing=false;
+  shooter.hasBall=false; Game.all.forEach(p=>p.hasBall=false);
+  b.x=shooter.x; b.y=shooter.y; b.h=40;
+  Game.phase='live'; Game.inbounder=null; Game.inboundReceiver=null;
 }
 function updateFreeThrow(dt){
   const ft=Game.freeThrow;
   const shooterIsHuman = ft.shooter.isUser || ft.shooter.isUser2;
+  const b=Game.ball;
   if(ft.state==='aim'){
     // moving meter; human taps space/slash to shoot, AI auto-fires
     ft.meter += dt*1.3*ft.dir;
     if(ft.meter>1){ ft.meter=1; ft.dir=-1; } if(ft.meter<0){ ft.meter=0; ft.dir=1; }
-    const fire = ft.shooter.isUser ? KEYS['Space'] : ft.shooter.isUser2 ? KEYS['Slash'] : false;
+    // must be a fresh press — holding the key from the play before doesn't fire
+    const fire = ft.shooter.isUser ? pressed('Space', ft.keys) : ft.shooter.isUser2 ? pressed('Slash', ft.keys) : false;
     ft.timer+=dt;
-    if((shooterIsHuman && fire) || (!shooterIsHuman && ft.timer>0.8)){
-      const timing = shooterIsHuman ? (1-Math.abs(ft.meter-0.5)*2) : (0.55+Math.random()*0.3);
-      const ftAttr = ft.shooter.isUser? S.player.attrs.shooting : 6;
-      const made = Math.random() < (0.45 + ftAttr*0.03 + Math.max(0,timing)*0.30);
+    b.x = ft.shooter.x; b.y = ft.shooter.y; b.h = 40;
+    if((shooterIsHuman && fire && ft.timer>0.25) || (!shooterIsHuman && ft.timer>0.9)){
+      const timing = shooterIsHuman ? Math.max(0, 1-Math.abs(ft.meter-0.5)*2.6) : (0.55+Math.random()*0.35);
+      const ftAttr = ft.shooter.isUser && !Game.versus ? S.player.attrs.shooting : 6*(ft.shooter.isUser2?1:teamRating(ft.shooter.team));
+      const made = Math.random() < Math.min(0.97, 0.40 + ftAttr*0.035 + timing*0.30);
       ft.made=made; ft.state='shot'; ft.timer=0;
+      ft.shooter.shootPose=0.5;
+      if(ft.shooter.isUser) Game.stats.fta++;
       Audio8.shotRelease();
-      if(made){ Audio8.swish(); if(ft.shooter.team==='home') Game.scoreHome++; else Game.scoreAway++;
-        if(ft.shooter.isUser){ Game.stats.points++; }
-        addFloat(attackingHoopX(ft.shooter.team), COURT.hoopY-60, "+1", '#ffd166', 18);
-      } else Audio8.rimMiss();
     }
   } else if(ft.state==='shot'){
     ft.timer+=dt;
-    if(ft.timer>0.7){
-      ft.remaining--;
+    // the ball visibly arcs to the rim
+    const t=Math.min(1, ft.timer/0.6), hx=attackingHoopX(ft.shooter.team);
+    b.x = ft.shooter.x + (hx-ft.shooter.x)*t; b.y = COURT.hoopY; b.h = 40 + Math.sin(Math.PI*t)*110 + t*60;
+    if(t>=1 && !ft.resolved){
+      ft.resolved=true;
+      if(ft.made){
+        Audio8.swish();
+        if(ft.shooter.team==='home') Game.scoreHome++; else Game.scoreAway++;
+        if(ft.shooter.isUser){ Game.stats.points++; Game.stats.ftm++; gainXP(3); checkSponsor(); }
+        addFloat(hx, COURT.hoopY-60, "+1", '#ffd166', 18);
+      } else Audio8.rimMiss();
+    }
+    if(ft.timer>1.0){
+      ft.remaining--; ft.resolved=false;
       if(ft.remaining>0){ ft.state='aim'; ft.meter=0; ft.dir=1; ft.timer=0; }
       else {
-        // done → other team inbounds
         const off=ft.shooter.team;
         Game.freeThrow=null;
-        const other = off==='home'?Game.away:Game.home;
-        attachBall(other[0]);
-        Game.phase='live';
+        if(ft.made){ startInbound(off); }
+        else {
+          // missed last free throw: live rebound off the rim
+          b.loose=true; b.rest=false; b.hitRim=true;
+          b.x = hx + (hx<COURT.W/2? 50 : -50); b.y = COURT.hoopY + (Math.random()*80-40);
+          b.h = 90; b.vh = -20; b.vx = (hx<COURT.W/2?1:-1)*(40+Math.random()*60); b.vy = Math.random()*80-40;
+          Game.phase='live';
+        }
       }
     }
   }
@@ -2235,65 +2568,83 @@ function updateFreeThrow(dt){
 
 /* alternate steal used by P2 / specials (mirrors attemptSteal but for any player) */
 function attemptStealBy(u, forcedChance){
-  if(Game.phase!=='live') return;
+  if(Game.phase!=='live') return false;
+  if(u.stealCD>0 && forcedChance==null) return false;
+  u.stealCD = 0.45;
   const bh=Game.ball.holder;
-  if(!bh || bh.team===u.team) return;
+  if(!bh || bh.team===u.team) return false;
   const d=Math.sqrt(dist2(u,bh));
-  const radius = forcedChance? 110 : 60;
-  if(d>radius) return;
+  const radius = forcedChance? 110 : 62;
+  if(d>radius){ if(!forcedChance) addFloat(u.x,u.y-80,"TOO FAR",'#8fa0b8',11); return false; }
   Audio8.squeak();
-  const chance = forcedChance!=null ? forcedChance : 0.28;
+  // protect the ball: swiping at a handler shielding it (you're behind them) is harder
+  const chance = forcedChance!=null ? forcedChance : 0.30;
   if(Math.random()<chance){
     Audio8.steal(); attachBall(u, true);
     addFloat(u.x,u.y-90,"STEAL!", '#4ade80', 16);
-  } else if(Math.random()<0.28){
-    // reaching in → foul
-    commitFoul(bh.team, bh, false);
+    if(u.isUser){ Game.stats.steals++; gainXP(10); checkSponsor(); }
+    chargeSpecial(u.team, 18);
+  } else if(Math.random()<0.25){
+    commitFoul(bh.team, bh, false, u);   // reaching in → foul
   }
+  return true;
 }
 
 /* ---------------- shooting ---------------- */
+function shooterAttr(shooter){
+  if(shooter.isUser) return Game.versus ? 6 : S.player.attrs.shooting;
+  if(shooter.isUser2) return 6;
+  return 6.5 * teamRating(shooter.team) * cpuCfg(shooter.team,'aiSkill');
+}
+// width of the green "perfect release" zone on the meter (bigger on Easy)
+function sweetSpotHalf(shooter){
+  const human = shooter && (shooter.isUser || shooter.isUser2);
+  const winMul = (human && !Game.versus && Game.diffCfg) ? Game.diffCfg.timingWin : 1;
+  return 0.075*winMul;
+}
 function computeShotChance(shooter, meterT){
   const hx = attackingHoopX(shooter.team);
-  // timing window scales with difficulty (Easy = forgiving, Hard = tight)
-  const winMul = (Game.diffCfg ? Game.diffCfg.timingWin : 1);
-  const peak = 1 - Math.abs(meterT-0.5)*(2.3/winMul);
-  const timing = Math.max(0, Math.min(1, peak));
-  const shootAttr = shooter.isUser ? S.player.attrs.shooting
-                                   : (5 + Game.diff*2) * (Game.diffCfg?Game.diffCfg.aiSkill:1);
+  // timing: perfect inside the green zone, falling off outside it
+  const half = sweetSpotHalf(shooter);
+  const off = Math.max(0, Math.abs(meterT-0.5)-half);
+  const timing = Math.max(0, 1 - off*3.2);
+  const shootAttr = shooterAttr(shooter);
 
   const d = Math.hypot(shooter.x-hx, shooter.y-COURT.hoopY);
   const isThree = d > 330;
 
-  // Distance is the dominant factor and gates the WHOLE shot: a layup is a
-  // near-lock, a three is a real gamble, and a half-court heave is nearly zero.
-  // Curve: 1 at the rim, ~0.55 at the arc, ~0.03 at half court, 0 full court.
-  const distNorm = Math.min(1, Math.max(0, (d-55)/500));
-  const distFactor = Math.max(0, 1 - Math.pow(distNorm, 1.4));
+  // Distance is the dominant factor: a layup is a near-lock, a three is a real
+  // gamble, and a half-court heave is nearly zero.
+  const distNorm = Math.min(1, Math.max(0, (d-55)/520));
+  const distFactor = Math.max(0, 1 - Math.pow(distNorm, 1.5));
 
-  // the makeable portion is multiplied by distance, so skill+timing can't
-  // rescue a shot from way downtown.
-  let chance = distFactor * (0.42 + shootAttr*0.035 + timing*0.30);
+  let chance = distFactor * (0.36 + shootAttr*0.035 + timing*0.30);
+  if(timing>=1) chance += 0.04;   // perfect release bonus
 
-  if(isThree && shooter.isUser && S.player.badges.includes('shooting')) chance += 0.10*distFactor;
+  if(isThree && shooter.isUser && !Game.versus && S.player.badges.includes('shooting')) chance += 0.10*distFactor;
 
   // defensive contest: a defender in your face tanks the shot
   const defenders = shooter.team==='home' ? Game.away : Game.home;
   let nearest = Infinity;
-  defenders.forEach(df=>{ const dd = Math.hypot(df.x-shooter.x, df.y-shooter.y); if(dd<nearest) nearest=dd; });
-  if(nearest < 78) chance -= (1 - nearest/78) * 0.30;
+  defenders.forEach(df=>{ if(df.stunTimer>0) return; const dd = Math.hypot(df.x-shooter.x, df.y-shooter.y); if(dd<nearest) nearest=dd; });
+  if(nearest < 85) chance -= (1 - nearest/85) * 0.28;
 
-  if(shooter.buffed) chance += 0.05;
+  if(shooter.buffed) chance += 0.06;
+  // tired legs = flat jumpers
+  if(shooter.isUser && Game.stamina<25) chance -= 0.05;
+  if(shooter.isUser2 && Game.stamina2<25) chance -= 0.05;
   chance = Math.max(0.02, Math.min(0.97, chance));
-  return { chance, isThree, hx };
+  return { chance, isThree, hx, nearest };
 }
 
 function releaseShot(shooter, meterT){
+  if(!shooter.hasBall) return;
   const { chance, isThree, hx } = computeShotChance(shooter, meterT);
   const b = Game.ball;
   const dRim = Math.hypot(shooter.x-hx, shooter.y-COURT.hoopY);
   const isLayup = dRim < 150;
-  b.inAir=true; b.loose=false; b.holder=null; b.blockedThisShot=false;
+  b.inAir=true; b.loose=false; b.holder=null; b.blockedThisShot=false; b.blockRolled=null;
+  b.passing=false; b.dunk=false;
   shooter.hasBall=false;
   b.shooter=shooter;
   b.made = Math.random()<chance;
@@ -2301,6 +2652,22 @@ function releaseShot(shooter, meterT){
   b.layup = isLayup;
   b.sx=shooter.x; b.sy=shooter.y;
   b.tx=hx; b.ty=COURT.hoopY;
+  b.releaseClock = Game.quarterTime;
+  if(shooter.isUser){ Game.stats.fga++; if(isThree) Game.stats.tpa++; }
+  // shooting foul: a defender draped on the shooter sometimes gets whistled
+  const defenders = shooter.team==='home' ? Game.away : Game.home;
+  let closest=null, cd=Infinity;
+  defenders.forEach(df=>{ const dd=Math.hypot(df.x-shooter.x, df.y-shooter.y); if(dd<cd){ cd=dd; closest=df; } });
+  b.fouled = false;
+  if(closest && cd<48 && !closest.isUser && !closest.isUser2 && Math.random() < (isLayup?0.22:0.10)){
+    b.fouled = true; b.fouler = closest;
+  }
+  // a CPU defender in position may get a hand on it (one roll per shot)
+  b.blockBy = null;
+  if(closest && !closest.isUser && !closest.isUser2 && cd<70 && !b.fouled && closest.stunTimer<=0){
+    const bc = (isLayup?0.16:0.07) * teamRating(closest.team) * cpuCfg(closest.team,'aiSteal');
+    if(Math.random()<bc){ b.blockBy = closest; b.blockAt = 0.18 + Math.random()*0.15; }
+  }
   if(isLayup){
     // LAYUP/DUNK: the shooter drives up off the floor and finishes quick & low
     shooter.jumping = true; shooter.jumpVel = 240; shooter.jumpH = Math.max(shooter.jumpH,1);
@@ -2308,16 +2675,39 @@ function releaseShot(shooter, meterT){
     b.arcT=0; b.arcDur=0.42;
     Audio8.squeak();
   } else {
+    shooter.jumping = true; shooter.jumpVel = 170; shooter.jumpH = Math.max(shooter.jumpH,1);
     shooter.shootPose = 0.55;
-    b.arcT=0; b.arcDur=0.85;
+    b.arcT=0; b.arcDur=0.6 + Math.min(0.4, dRim/1400);
   }
-  if(shooter.isUser) showPopup(`${Math.round(chance*100)}% Chance!`, chance>0.6?'#34d399':chance>0.35?'#ffd166':'#f87171');
+  if(shooter.isUser || shooter.isUser2){
+    const half=sweetSpotHalf(shooter);
+    const grade = Math.abs(meterT-0.5)<=half ? 'PERFECT' : meterT<0.5 ? 'EARLY' : 'LATE';
+    const txt = `${grade} · ${Math.round(chance*100)}%`;
+    const col = grade==='PERFECT' ? '#34d399' : chance>0.35?'#ffd166':'#f87171';
+    if(shooter.isUser) showPopup(txt, col); else Game.shotPopup2={text:txt,color:col,t:0,dur:1.3};
+  }
   Audio8.shotRelease();
+}
+// knock a shot away: the ball pops loose instead of flying on to the rim
+function blockShot(blocker){
+  const b=Game.ball;
+  b.blockedThisShot=true; b.made=false; b.inAir=false; b.fouled=false;
+  b.loose=true; b.rest=false;
+  const away = Math.sign(b.x - blocker.x) || (blocker.team==='home'?-1:1);
+  b.vx = away*(120+Math.random()*80); b.vy = (Math.random()*2-1)*90; b.vh = 80;
+  b.h = Math.max(b.h, 60);
+  blocker.jumping=true; blocker.jumpVel=Math.max(blocker.jumpVel||0,220); blocker.jumpH=Math.max(blocker.jumpH,1);
+  blocker.shootPose = 0.3;
+  Audio8.block();
+  addFloat(blocker.x, blocker.y-100, "BLOCKED!", blocker.team==='home'?'#4ade80':'#ff5577', 18);
+  if(b.shooter && b.shooter.isUser){ Game.userStreak=0; b.shooter.buffed=false; b.shooter.buffTimer=0; }
+  screenShake(7, 0.25);
 }
 
 function showPopup(text,color){ Game.shotPopup={text,color,t:0,dur:1.3}; }
 function updateShotPopup(dt){
   if(Game.shotPopup){ Game.shotPopup.t+=dt; if(Game.shotPopup.t>=Game.shotPopup.dur) Game.shotPopup=null; }
+  if(Game.shotPopup2){ Game.shotPopup2.t+=dt; if(Game.shotPopup2.t>=Game.shotPopup2.dur) Game.shotPopup2=null; }
 }
 
 /* ---------------- ball ---------------- */
@@ -2334,10 +2724,12 @@ function updateBall(dt){
     if(!b.passDeflected && t>0.2 && t<0.9){
       const defenders = b.passTeam==='home' ? Game.away : Game.home;
       for(const df of defenders){
+        if(df.stunTimer>0) continue;
         const dd = Math.hypot(df.x-b.x, df.y-b.y);
-        if(dd < 44){
-          const defAttr = df.isUser ? (S.player.attrs.defense+heightDefBonus()) : (5+Game.diff);
-          const stealChance = (0.10 + defAttr*0.02) * (Game.diffCfg?Game.diffCfg.aiSteal:1) * dt*4;
+        if(dd < 40){
+          const human = df.isUser || df.isUser2;
+          const defAttr = df.isUser && !Game.versus ? (S.player.attrs.defense+heightDefBonus()) : 6*(human?1:teamRating(df.team));
+          const stealChance = (0.08 + defAttr*0.02) * (human?1:cpuCfg(df.team,'aiSteal')) * dt*4;
           if(Math.random() < stealChance){
             b.passDeflected = true; b.passing = false;
             b.loose = true; b.rest = false;
@@ -2345,6 +2737,7 @@ function updateBall(dt){
             b.vx = (Math.random()*2-1)*140; b.vy = (Math.random()*2-1)*140;
             Audio8.steal();
             addFloat(df.x, df.y-90, "DEFLECTED!", '#4ade80', 16);
+            if(b.passFrom && b.passFrom.isUser) Game.stats.to++;
             return;
           }
         }
@@ -2361,7 +2754,9 @@ function updateBall(dt){
     // the body instead of teleporting it to the other hand
     if(b.side===undefined) b.side = h.facing;
     b.side += (h.facing - b.side) * Math.min(1, dt*9);
-    const tx = h.x + b.side*34;
+    // gathering for a shot: ball comes up into the hands
+    const gathering = (h.isUser && Game.shotMeter.active) || (h.isUser2 && Game.shotMeter2.active);
+    const tx = h.x + b.side*(gathering?10:34);
     const ty = h.y + 4;
     if(b.snap){ b.x=tx; b.y=ty; b.side=h.facing; b.snap=false; }
     else {
@@ -2369,7 +2764,7 @@ function updateBall(dt){
       b.x += (tx-b.x)*l;
       b.y += (ty-b.y)*l;
     }
-    b.h = 8 + bounce + (h.jumpH||0);
+    b.h = gathering ? 70*(h.scale||1) + (h.jumpH||0) : 8 + bounce + (h.jumpH||0);
     return;
   }
   if(b.inAir){
@@ -2378,36 +2773,51 @@ function updateBall(dt){
     b.x = b.sx + (b.tx-b.sx)*t;
     b.y = b.sy + (b.ty-b.sy)*t;
     // layups rise straight up to the rim (low, quick); jumpers get a tall arc
-    b.h = b.layup ? (40 + t*90) : (30 + Math.sin(Math.PI*t)*150);
+    b.h = b.layup ? (40 + t*90) : (30 + Math.sin(Math.PI*t)*170 + t*100);
+    if(b.blockBy && !b.blockedThisShot && t>=b.blockAt){
+      const bl=b.blockBy; b.blockBy=null;
+      if(bl.stunTimer<=0 && Math.hypot(bl.x-b.x, bl.y-b.y)<110){ blockShot(bl); return; }
+    }
     if(t>=1){ b.inAir=false; resolveShot(); }
     return;
   }
   if(b.loose){
-    if(b.rest){
-      // ball is sitting on the floor — whoever reaches it picks it up (no teleport)
-      let grabber=null, gd=Infinity;
-      Game.all.forEach(p=>{ const d=dist2(p,b); if(d<gd){ gd=d; grabber=p; } });
-      if(grabber && gd < 34*34){
-        b.rest=false;
-        const wasHome = grabber.team==='home';
-        attachBall(grabber, true);   // ease into the hand — no teleport
-        if(grabber.isUser){ Game.stats.rebounds++; gainXP(5); }
-        addFloat(grabber.x, grabber.y-80, "REBOUND!", wasHome?'#34d399':'#ff8c00', 14);
+    // anyone close enough snatches a loose ball out of the air once it's low enough
+    let grabber=null, gd=Infinity;
+    Game.all.forEach(p=>{
+      if(p.stunTimer>0) return;
+      const reachH = 70 + (p.jumpH||0) + (p.scale||1)*10;
+      if(b.h > reachH) return;
+      const d=dist2(p,b); if(d<gd){ gd=d; grabber=p; }
+    });
+    if(grabber && gd < 38*38){
+      b.rest=false;
+      const wasMiss = b.hitRim;
+      const offensive = b.shooter && grabber.team===b.shooter.team && wasMiss;
+      attachBall(grabber, true);   // ease into the hand — no teleport
+      if(wasMiss){
+        if(grabber.isUser){ Game.stats.rebounds++; gainXP(5); checkSponsor(); }
+        addFloat(grabber.x, grabber.y-80, offensive?"OFF. REBOUND!":"REBOUND!", grabber.team==='home'?'#34d399':'#ff8c00', 14);
+      } else if(grabber.isUser){
+        addFloat(grabber.x, grabber.y-80, "LOOSE BALL!", '#34d399', 13);
       }
       return;
     }
+    if(b.rest) return;
     b.vh -= 500*dt;
     b.h += b.vh*dt;
     b.x += (b.vx||0)*dt;
     b.y += (b.vy||0)*dt;
     // keep the ball in bounds while loose
+    if(b.x<COURT.inLeft || b.x>COURT.inRight){ b.vx = -(b.vx||0)*0.5; }
+    if(b.y<COURT.inTop || b.y>COURT.inBottom){ b.vy = -(b.vy||0)*0.5; }
     b.x = Math.max(COURT.inLeft, Math.min(COURT.inRight, b.x));
     b.y = Math.max(COURT.inTop, Math.min(COURT.inBottom, b.y));
     if(b.h<=6){
       b.h=6; b.vh*=-0.45; b.vx=(b.vx||0)*0.7; b.vy=(b.vy||0)*0.7;
-      Audio8.dribble();
+      if(Math.abs(b.vh)>25) Audio8.dribble();
       if(Math.abs(b.vh)<40 && Math.abs(b.vx)<25 && Math.abs(b.vy)<25){
-        // ball comes to rest on the floor — players must go grab it (a real rebound)
+        // ball comes to rest on the floor — players must go grab it
         b.rest=true; b.vx=0; b.vy=0; b.vh=0; b.h=6;
       }
     }
@@ -2417,11 +2827,13 @@ function updateBall(dt){
 function resolveShot(){
   const b = Game.ball;
   const shooter = b.shooter;
+  const fouled = b.fouled;
+  b.fouled = false;
   if(b.made){
     Audio8.swish();
-    // crowd reacts — bigger for threes; a buzzer-beater gets the full treatment
-    const buzzerBeater = Game.quarterTime < 1.2;
-    // a CLUTCH shot: final quarter, under 15s, a one-possession game before this basket
+    // buzzer-beater: released before the horn, the clock has since hit zero
+    const buzzerBeater = Game.quarterTime<=0.05;
+    // a CLUTCH shot: final period, under 15s, a one-possession game before this basket
     const marginBefore = Math.abs(Game.scoreHome-Game.scoreAway);
     const clutch = !buzzerBeater && Game.quarter>=4 && Game.quarterTime<15 && marginBefore<=3;
     if(buzzerBeater) Audio8.buzzerBeater();
@@ -2429,11 +2841,11 @@ function resolveShot(){
     const pts = b.isThree?3:2;
     if(shooter.team==='home') Game.scoreHome+=pts; else Game.scoreAway+=pts;
     if(clutch){ addFloat(shooter.x, shooter.y-100, "CLUTCH!", '#2ee6ff', 20); screenShake(6, 0.25); }
+    if(buzzerBeater){ addFloat(b.tx, b.ty-110, "BUZZER BEATER!", '#2ee6ff', 22); screenShake(10, 0.4); buzz([60,30,60,30,80]); }
     if(shooter.isUser){
-      Game.stats.points+=pts;
-      gainXP(clutch ? pts*14 : pts*8);
+      Game.stats.points+=pts; Game.stats.fgm++; if(b.isThree) Game.stats.tpm++;
+      gainXP(clutch||buzzerBeater ? pts*14 : pts*8);
       if(clutch) buzz([50,30,50]);
-      checkSponsor();
       buzz(30);
       Game.userStreak = (Game.userStreak||0) + 1;
       if(Game.userStreak===3){
@@ -2445,27 +2857,49 @@ function resolveShot(){
         addFloat(shooter.x, shooter.y-110, `${Game.userStreak} STRAIGHT!`, '#ff8c00', 16);
       }
     }
-    if(b.layup){ addFloat(b.tx, b.ty-84, "AND-1 LAYUP!", '#34d399', 13); screenShake(7, 0.3); }
-    if(buzzerBeater){ screenShake(10, 0.4); buzz([60,30,60,30,80]); }
+    if(b.dunk){ screenShake(9, 0.35); }
+    else if(b.layup){ addFloat(b.tx, b.ty-84, "LAYUP!", '#34d399', 13); }
     // build the special meter for the scoring side
     chargeSpecial(shooter.team, b.isThree?26:20);
     if(Game.pendingAssist && shooter.team==='home' && !shooter.isUser){
       Game.stats.assists++; gainXP(6); Game.pendingAssist=null;
+      addFloat(Game.user.x, Game.user.y-100, "ASSIST!", '#22d3ee', 14);
     }
+    if(shooter.isUser) checkSponsor();
     addFloat(b.tx, b.ty-60, `+${pts}`, '#ffd166', 20);
+    b.dunk=false;
+    if(fouled){
+      // AND-ONE: count the bucket, then one free throw
+      Game.banner={ text:'AND ONE!', t:1.1 };
+      if(b.fouler) commitFoul(shooter.team, shooter, true, b.fouler);
+      if(Game.quarterTime>0 || Game.quarter<4 || Game.scoreHome===Game.scoreAway) startFreeThrows(shooter, 1);
+      else startInbound(shooter.team);
+      return;
+    }
     startInbound(shooter.team);
   } else {
+    if(fouled){
+      // fouled on a miss → 2 shots (3 on a three-point attempt)
+      if(b.fouler) commitFoul(shooter.team, shooter, true, b.fouler);
+      addFloat(shooter.x, shooter.y-110, "SHOOTING FOUL", '#ffd166', 15);
+      if(b.shooter && b.shooter.isUser && Game.userStreak){ Game.userStreak=0; b.shooter.buffed=false; }
+      startFreeThrows(shooter, b.isThree?3:2);
+      return;
+    }
     Audio8.rimMiss();
     if(b.shooter && b.shooter.isUser && Game.userStreak){
       Game.userStreak = 0;
       b.shooter.buffed = false; b.shooter.buffTimer = 0;
     }
-    b.loose=true;
-    b.x = b.tx + (b.tx<COURT.W/2 ? 40+Math.random()*70 : -(40+Math.random()*70));
-    b.y = b.ty + (Math.random()*120-60);
-    b.h = 90; b.vh = -30;
-    b.vx = Math.random()*60-30;
-    b.vy = Math.random()*60-30;
+    b.loose=true; b.rest=false; b.hitRim=true;
+    const outDir = b.tx<COURT.W/2 ? 1 : -1;
+    b.x = b.tx + outDir*(30+Math.random()*30);
+    b.y = b.ty + (Math.random()*80-40);
+    b.h = 110; b.vh = 40;
+    // long shots → long rebounds
+    const longShot = Math.hypot(b.sx-b.tx, b.sy-b.ty) > 300;
+    b.vx = outDir*(longShot ? 90+Math.random()*120 : 40+Math.random()*80);
+    b.vy = Math.random()*160-80;
   }
 }
 
@@ -2476,110 +2910,124 @@ function resolveShot(){
 function startInbound(scoringTeam){
   // the team that was scored ON inbounds the ball
   const inbTeam = scoringTeam==='home' ? Game.away : Game.home;
-  const inb = inbTeam[0];
+  // a teammate takes it out; your point guard (you / Player 2) receives it
+  const inb = inbTeam[1];
+  const receiver = inbTeam[0];
   // they inbound from under the basket the scoring team attacked
   const baselineX = attackingHoopX(scoringTeam);
   const outSign = baselineX < COURT.W/2 ? -1 : 1; // which way is out of bounds
   inb.x = baselineX + outSign*45;                 // just past the baseline (OOB)
   inb.y = COURT.hoopY + 80;
-  inb.moving = false; inb.facing = -outSign;
+  inb.moving = false; inb.facing = -outSign; inb.jumpH=0; inb.jumping=false;
+  const b=Game.ball;
+  b.inAir=false; b.passing=false; b.loose=false; b.rest=false;
   attachBall(inb);
+  b.snap=true;
 
-  // pick a receiver (their PG/next player) and send them to a catch spot inbounds
-  const receiver = inbTeam[1] || inbTeam[0];
-  receiver.inboundSpot = { x: baselineX - outSign*140, y: COURT.hoopY + 40 };
+  // send the receiver to a catch spot inbounds (the AI walks there; a human can move freely)
+  receiver.inboundSpot = { x: baselineX - outSign*150, y: COURT.hoopY + 30 };
 
   Game.phase='inbound';
   Game.inbounder=inb;
   Game.inboundReceiver=receiver;
-  Game.inboundTimer=1.1;      // beat before the pass
+  Game.inboundTimer=1.0;      // beat before the pass
+  Game.shotClock = 24;
 }
 function updateInbound(dt){
   if(Game.phase!=='inbound' || !Game.inbounder) return;
   const rec = Game.inboundReceiver;
-  // receiver jogs to the catch spot
-  if(rec && rec.inboundSpot && rec!==Game.inbounder){
+  const human = rec && (rec.isUser || rec.isUser2);
+  // AI receivers jog to the catch spot; humans get the ball wherever they stand
+  if(rec && !human && rec.inboundSpot && rec!==Game.inbounder){
     const dx=rec.inboundSpot.x-rec.x, dy=rec.inboundSpot.y-rec.y;
     const len=Math.hypot(dx,dy)||1;
     if(len>6){
-      rec.x += (dx/len)*Math.min(200*dt,len);
-      rec.y += (dy/len)*Math.min(200*dt,len);
+      rec.x += (dx/len)*Math.min(260*dt,len);
+      rec.y += (dy/len)*Math.min(260*dt,len);
       if(Math.abs(dx)>2) rec.facing = dx>0?1:-1;
       rec.moving=true; rec.animT += dt*10;
     } else rec.moving=false;
   }
+  const inb = Game.inbounder;
+  inb.moving=false;
   Game.inboundTimer -= dt;
   if(Game.inboundTimer<=0){
     // throw the inbound pass as a visible travel, then resume live play
-    const from=Game.inbounder, to=rec||Game.inbounder;
-    startPass(from, to, {dur:0.35});
-    from.x += (from.x<COURT.W/2? 40 : -40); // step back inbounds
+    const to=rec||inb;
+    startPass(inb, to, {dur:0.4, safe:true});
+    inb.x += (inb.x<COURT.W/2? 50 : -50); // step back inbounds
     Game.phase='live';
     Game.inbounder=null; Game.inboundReceiver=null;
     Audio8.dribble();
   }
 }
 
-function giveLooseBall(){
-  let best=null,bd=Infinity;
-  Game.all.forEach(p=>{ const d=dist2(p,Game.ball); if(d<bd){bd=d;best=p;} });
-  if(best){
-    attachBall(best);
-    if(best.isUser){ Game.stats.rebounds++; gainXP(5); }
-  }
-}
+
 
 /* ---------------- pass / steal ---------------- */
 function doPass(passer, prefer){
+  if(!passer.hasBall) return;
   const mates = (passer.team==='home'?Game.home:Game.away).filter(p=>p!==passer);
   if(!mates.length) return;
   const defenders = passer.team==='home'?Game.away:Game.home;
+  const hx = attackingHoopX(passer.team);
   let best=null,bestScore=-Infinity;
-  // pick the most OPEN teammate: reward distance from the nearest defender,
-  // lightly penalize very long cross-court passes. A "prefer" target (a human
-  // calling for the ball) gets a big bonus.
+  // pick the most OPEN teammate: reward distance from the nearest defender and
+  // being closer to the rim, lightly penalize long cross-court passes. A
+  // "prefer" target (a human calling for the ball) gets a big bonus.
   mates.forEach(t=>{
     let nd=Infinity; defenders.forEach(df=>{ const dd=dist2(df,t); if(dd<nd) nd=dd; });
-    const openness = Math.sqrt(nd);
+    const openness = Math.min(220, Math.sqrt(nd));
     const passLen = Math.sqrt(dist2(t,passer));
-    let score = openness - passLen*0.25;
-    if(prefer && t===prefer) score += 400;
+    const rimD = Math.hypot(t.x-hx, t.y-COURT.hoopY);
+    let score = openness - passLen*0.22 - rimD*0.12;
+    // humans facing a direction usually mean "pass that way"
+    if(passer.isUser || passer.isUser2) score += Math.sign(t.x-passer.x)===passer.facing ? 40 : 0;
+    if(prefer && t===prefer) score += 1000;
     if(score>bestScore){ bestScore=score; best=t; }
   });
   if(!best) return;
-  const passAttr = passer.isUser ? S.player.attrs.passing : (5+Game.diff);
-  let chance = 0.55 + passAttr*0.045;
-  if(passer.isUser && S.player.badges.includes('passing')) chance += 0.15;
+  // passes are usually clean — turnovers come from defenders in the lane, plus a
+  // small chance of a sloppy throw on long passes into traffic
+  const passAttr = passer.isUser && !Game.versus ? S.player.attrs.passing : 6;
+  const passLen = Math.sqrt(dist2(best,passer));
+  let chance = 0.93 + passAttr*0.006 - Math.max(0, passLen-500)/3000;
+  if(passer.isUser && !Game.versus && S.player.badges.includes('passing')) chance += 0.05;
   Audio8.dribble();
   if(Math.random()<chance){
     startPass(passer, best);
     if(passer.isUser){
-      gainXP(2);
-      Game.pendingAssist = { t:3 };
-      if(S.player.badges.includes('passing')){ best.buffed=true; best.buffTimer=5; }
+      gainXP(1);
+      Game.pendingAssist = { t:3.5 };
+      if(!Game.versus && S.player.badges.includes('passing')){ best.buffed=true; best.buffTimer=5; }
     }
   } else {
     const b=Game.ball;
     b.holder=null; passer.hasBall=false;
-    b.loose=true;
+    b.loose=true; b.rest=false; b.hitRim=false;
     b.x=(passer.x+best.x)/2; b.y=(passer.y+best.y)/2;
     b.h=40; b.vh=-20;
     b.vx=(best.x-passer.x)*0.4; b.vy=(best.y-passer.y)*0.4;
     addFloat(passer.x, passer.y-90, "Bad Pass!", '#ff5577', 15);
+    if(passer.isUser) Game.stats.to++;
   }
 }
 
 function attemptSteal(user){
+  if(Game.versus) return attemptStealBy(user);
   if(Game.phase!=='live') return;
+  if(user.stealCD>0) return;
+  user.stealCD = 0.45;
   const bh = Game.ball.holder;
   if(!bh || bh.team===user.team) return;
   const d = Math.sqrt(dist2(user,bh));
-  let radius = 60;
+  let radius = 62;
   if(S.player.badges.includes('defense')) radius = 95;
-  if(d>radius) return;
+  if(d>radius){ addFloat(user.x,user.y-80,"TOO FAR",'#8fa0b8',11); return; }
   const defAttr = S.player.attrs.defense + heightDefBonus();
-  let chance = (0.15 + defAttr*0.05) * (Game.diffCfg?Game.diffCfg.playerSteal:1);
-  if(S.player.badges.includes('defense')) chance += 0.2;
+  let chance = (0.12 + defAttr*0.035) * (Game.diffCfg?Game.diffCfg.playerSteal:1);
+  if(S.player.badges.includes('defense')) chance += 0.15;
+  chance *= 1.1 - 0.2*teamRating(bh.team);   // better ball-handlers protect it
   Audio8.squeak();
   if(Math.random()<chance){
     Audio8.steal();
@@ -2588,13 +3036,15 @@ function attemptSteal(user){
     attachBall(user, true);
     addFloat(user.x, user.y-90, "STEAL!", '#4ade80', 18);
     buzz(25);
+    checkSponsor();
   } else if(Math.random()<0.22){
-    commitFoul(bh.team, bh, false);   // reach-in foul on a missed swipe
+    commitFoul(bh.team, bh, false, user);   // reach-in foul on a missed swipe
   }
 }
 
 /* ---------------- XP / sponsor ---------------- */
 function gainXP(n){
+  if(S.mode==='versus') return;
   S.player.xp += n;
   while(S.player.xp >= S.player.xpToNext){
     S.player.xp -= S.player.xpToNext;
@@ -2603,70 +3053,102 @@ function gainXP(n){
     const sp = Math.round(3*S.spMultiplierNextGame);
     S.player.sp += sp;
     Audio8.levelup();
-    addFloat(Game.home[0].x, Game.home[0].y-130, `LEVEL UP! +${sp} SP`, '#ffd166', 20);
+    if(Game && !Game.over) addFloat(Game.home[0].x, Game.home[0].y-130, `LEVEL UP! +${sp} SP`, '#ffd166', 20);
   }
 }
 function checkSponsor(){
+  if(S.mode!=='journey' || !Game) return;
   if(S.sponsor && !S.sponsor.done && S.sponsor.check(Game.stats)){
     S.sponsor.done=true;
     addFloat(Game.home[0].x, Game.home[0].y-160, "SPONSOR GOAL MET!", '#4ade80', 18);
+    Audio8.badge();
   }
 }
 
 /* ---------------- AI ---------------- */
 function updateAI(dt){
+  const b = Game.ball;
+  const ballLoose = !b.holder && !b.inAir && !b.passing && (b.loose||b.rest);
+  // one chaser per team for a loose ball
+  const chasers = {};
+  if(ballLoose){
+    ['home','away'].forEach(tm=>{
+      const mine = tm==='home'?Game.home:Game.away;
+      let closest=null, cd=Infinity;
+      mine.forEach(m=>{ if(m.isUser||m.isUser2) return; const d=dist2(m,b); if(d<cd){cd=d;closest=m;} });
+      chasers[tm]=closest;
+    });
+  }
   Game.all.forEach(p=>{
+    if(p.stealCD>0) p.stealCD-=dt;
     if(p.isUser || p.isUser2) return;
     if(Game.phase==='inbound' && p===Game.inbounder) return;
-    if(p.stunTimer>0){ p.stunTimer-=dt; p.moving=false; return; }
+    if(p.stunTimer>0){ p.stunTimer-=dt; p.moving=false; stepJump(p, dt); return; }
     if(p.buffTimer>0){ p.buffTimer-=dt; if(p.buffTimer<=0) p.buffed=false; }
     p.aiTimer -= dt;
 
-    const b = Game.ball;
-    const offense = b.holder ? b.holder.team : null;
+    const rating = teamRating(p.team);
+    const offense = b.holder ? b.holder.team : (b.passing ? b.passTeam : null);
     const hx = attackingHoopX(p.team);
+    const toHoop = hx===COURT.hoopRightX ? -1 : 1;   // direction from hoop back toward half court
 
     let tx=p.x, ty=p.y;
-    let speed = (p.baseSpeed||200) + Game.diff*22;
-
-    const ballLoose = !b.holder && !b.inAir && (b.loose||b.rest);
+    let speed = (p.baseSpeed||200) + rating*22;
+    const slot = SLOTS[p.role] || SLOTS.SF;
 
     if(ballLoose){
-      // only the single closest teammate chases the loose ball; the rest space out
-      const mine = p.team==='home'?Game.home:Game.away;
-      let closest=null, cd=Infinity;
-      mine.forEach(m=>{ if(m.isUser||m.isUser2) return; const d=dist2(m,b); if(d<cd){cd=d;closest=m;} });
-      if(p===closest){ tx=b.x; ty=b.y; speed=(p.baseSpeed||200)*1.4+Game.diff*22; }
-      else { const slot=SLOTS[p.role]||SLOTS.SF; tx=hx+(hx===COURT.hoopRightX?-slot.dist:slot.dist); ty=COURT.hoopY+slot.yOff; }
+      if(chasers[p.team]===p){ tx=b.x; ty=b.y; speed=(p.baseSpeed||200)*1.4+rating*22; }
+      else { tx=hx+toHoop*slot.dist; ty=COURT.hoopY+slot.yOff; }
+    } else if(b.inAir && !b.dunk){
+      // shot in the air: bigs crash the glass, guards get back
+      const shotHx = b.tx;
+      const sideIn = shotHx===COURT.hoopRightX ? -1 : 1;
+      if(p.role==='C' || p.role==='PF'){
+        tx = shotHx + sideIn*(70 + (p.role==='C'?0:40)); ty = COURT.hoopY + (p.role==='C'?30:-40);
+        speed *= 1.2;
+      } else if(b.shooter && p.team!==b.shooter.team){
+        tx = p.x; ty = p.y;   // defenders hold
+      } else {
+        tx = hx+toHoop*slot.dist; ty = COURT.hoopY+slot.yOff;
+      }
     } else if(p.hasBall){
       const dHoop = Math.hypot(p.x-hx, p.y-COURT.hoopY);
       const dirX = Math.sign(hx - p.x)||1;
       // drive smoothly toward the rim (no oscillating target = no jitter)
       tx = hx - dirX*50;
       ty = COURT.hoopY + (p.y-COURT.hoopY)*0.55;
-      speed = (p.baseSpeed||200)*1.15 + Game.diff*22;
+      speed = (p.baseSpeed||200)*1.08 + rating*22;
       // how tightly is the handler guarded?
       const defs = p.team==='home'?Game.away:Game.home;
-      let nd=Infinity; defs.forEach(df=>{ const d=dist2(df,p); if(d<nd) nd=d; });
+      let nd=Infinity; defs.forEach(df=>{ if(df.stunTimer>0) return; const d=dist2(df,p); if(d<nd) nd=d; });
       const guarded = nd < 62*62;
-      if(p.aiTimer<=0){
-        if(dHoop<175){                       // open layup range → take it
-          p.aiTimer=1.0+Math.random()*0.5; releaseShot(p, 0.42+Math.random()*0.28);
-        } else if(Game.shotClock<5){          // beat the shot clock
-          p.aiTimer=1.0; releaseShot(p, 0.30+Math.random()*0.4);
-        } else if(guarded && Math.random()<0.55){  // kick it out when pressured
+      const wideOpen = nd > 140*140;
+      if(Game.phase==='live' && p.aiTimer<=0){
+        const isThreeSpot = dHoop>335 && dHoop<420;
+        if(dHoop<170){                                   // at the rim → finish
+          p.aiTimer=1.0+Math.random()*0.5; aiShoot(p);
+        } else if(Game.shotClock<4){                     // beat the shot clock
+          p.aiTimer=1.0; aiShoot(p);
+        } else if(guarded && Math.random()<0.5){         // kick it out when pressured
           p.aiTimer=0.9; doPass(p);
-        } else if(dHoop<300 && !guarded && Math.random()<0.22){ // open pull-up
-          p.aiTimer=1.1; releaseShot(p, 0.4+Math.random()*0.32);
+        } else if(isThreeSpot && wideOpen && Math.random()<0.22*rating){   // open three
+          p.aiTimer=1.1; aiShoot(p);
+        } else if(dHoop<300 && !guarded && Math.random()<0.2){ // open pull-up
+          p.aiTimer=1.1; aiShoot(p);
+        } else if(Math.random()<0.18 && Game.shotClock<16){    // swing the ball
+          p.aiTimer=1.0; doPass(p);
+        } else {
+          p.aiTimer=0.35+Math.random()*0.3;
         }
       }
     } else if(p.team===offense){
-      const slot = SLOTS[p.role] || SLOTS.SF;
-      tx = hx + (hx===COURT.hoopRightX ? -slot.dist : slot.dist);
+      tx = hx + toHoop*slot.dist;
       ty = COURT.hoopY + slot.yOff;
+      // the human's teammates drift toward open space and cut when the defender sags
+      const myMarkDef = (p.team==='home'?Game.away:Game.home)[(p.team==='home'?Game.home:Game.away).indexOf(p)];
+      if(myMarkDef && dist2(myMarkDef,p)>150*150 && p.role!=='PG'){ tx = hx + toHoop*(slot.dist*0.55); }
       // a called play repositions teammates
       if(Game.playbook && Game.playbook.team===p.team){
-        const toHoop = hx===COURT.hoopRightX ? -1 : 1;
         if(Game.playbook.kind==='iso'){
           // clear out: everyone but the handler spaces to the far side
           tx = hx + toHoop*Math.max(slot.dist,300);
@@ -2675,7 +3157,7 @@ function updateAI(dt){
           // the big sets a screen near the handler then rolls to the rim
           if(p.role==='C'||p.role==='PF'){
             const bh=Game.ball.holder;
-            if(bh){ tx = bh.x + toHoop*30; ty = bh.y - 20 + (p.role==='C'?40:-40); }
+            if(bh){ tx = bh.x - toHoop*-30; ty = bh.y - 20 + (p.role==='C'?40:-40); }
             if(Math.hypot(p.x-hx,p.y-COURT.hoopY)<200){ tx=hx+toHoop*60; ty=COURT.hoopY; }
           }
         } else if(Game.playbook.kind==='fastbreak'){
@@ -2693,27 +3175,24 @@ function updateAI(dt){
       const dirToHoop = Math.sign(defHx - mark.x)||1;
       // pressure the ball-handler tightly; sag off your man otherwise (help D).
       const guardingHandler = b.holder===mark;
-      const cushion = guardingHandler ? 40 : 90;
+      const cushion = guardingHandler ? 38 : 85;
       tx = mark.x + dirToHoop*cushion;
-      ty = mark.y + (guardingHandler ? 8 : 24);
-      if(guardingHandler) speed *= 1.12;   // close out with urgency
+      ty = mark.y + (guardingHandler ? 8 : 20);
+      if(guardingHandler) speed *= 1.1;   // close out with urgency
       const d2m = dist2(p,mark);
-      if(Game.phase==='live' && mark.hasBall && d2m<65*65 && p.aiTimer<=0){
-        p.aiTimer = 1.4;
-        if(Math.random() < (0.05 + Game.diff*0.025)*(Game.diffCfg?Game.diffCfg.aiSteal:1)){
+      if(Game.phase==='live' && mark.hasBall && d2m<62*62 && p.aiTimer<=0){
+        p.aiTimer = 1.3 + Math.random()*0.6;
+        const humanHandler = mark.isUser || mark.isUser2;
+        let stealP = 0.07 * rating * cpuCfg(p.team,'aiSteal');
+        if(humanHandler && mark.isUser && !Game.versus) stealP *= 1.25 - S.player.attrs.passing*0.04; // good handlers protect it
+        if(Math.random() < stealP){
           Audio8.steal();
+          if(mark.isUser) Game.stats.to++;
           attachBall(p, true);
           addFloat(p.x, p.y-90, "STEAL!", '#ff8c00', 15);
-        }
-      }
-      if(b.inAir && b.shooter && b.shooter.team!==p.team && !b.blockedThisShot){
-        const dSh = dist2(p,{x:b.shooter.x,y:b.shooter.y});
-        if(dSh<70*70 && Math.random()<0.008*(Game.diffCfg?Game.diffCfg.aiSteal:1)){
-          b.made=false; b.blockedThisShot=true;
-          p.jumping=true; p.jumpVel=200; p.jumpH=Math.max(p.jumpH,1);
-          Audio8.block();
-          addFloat(p.x, p.y-90, "BLOCKED!", '#ff5577', 16);
-          if(b.shooter && b.shooter.isUser){ screenShake(8, 0.3); Game.userStreak=0; b.shooter.buffed=false; b.shooter.buffTimer=0; }
+          chargeSpecial(p.team, 15);
+        } else if(Math.random() < 0.06){
+          commitFoul(mark.team, mark, false, p);   // CPU reach-in
         }
       }
     }
@@ -2723,7 +3202,7 @@ function updateAI(dt){
 
     // SPRINT in transition: the farther from where they need to be, the faster.
     let sprinting = false;
-    if(baseDist>150){ speed *= 1.5; sprinting = true; p.sprintT = 0.2; }
+    if(baseDist>150){ speed *= 1.45; sprinting = true; p.sprintT = 0.2; }
     else if(p.sprintT>0){ p.sprintT-=dt; speed *= 1.2; }
 
     // SEPARATION: gently push off nearby players so they don't clump.
@@ -2732,37 +3211,31 @@ function updateAI(dt){
       if(o===p) return;
       const ox=p.x-o.x, oy=p.y-o.y;
       const dd=ox*ox+oy*oy;
-      if(dd>1 && dd<50*50){ const inv=1/Math.sqrt(dd); sepx+=ox*inv; sepy+=oy*inv; }
+      if(dd>1 && dd<46*46){ const inv=1/Math.sqrt(dd); sepx+=ox*inv; sepy+=oy*inv; }
     });
     const sepMag = Math.hypot(sepx,sepy);
     dx += sepx*18; dy += sepy*18;   // gentler push so crowded players don't tug-of-war
     const len = Math.hypot(dx,dy)||1;
 
     // DEADZONE: if essentially in position and not being crowded, hold still.
-    // This is what kills the twitchy back-and-forth vibration.
     if(baseDist < 16 && sepMag < 0.9){
       p.moving = false;
+      // defenders face the man they're guarding
+      if(p.team!==offense && offense){ const opp=p.team==='home'?Game.away:Game.home; const mk=opp[(p.team==='home'?Game.home:Game.away).indexOf(p)]; if(mk) p.facing = mk.x>p.x?1:-1; }
     } else {
-      // smooth the intended direction across frames — in a crowd the raw
-      // separation vector can flip sign frame-to-frame, which otherwise
-      // shows up as visible jitter/vibration when several players cluster
       const dirX = dx/len, dirY = dy/len;
       if(p.moveDirX==null){ p.moveDirX=dirX; p.moveDirY=dirY; }
       const smoothT = Math.min(1, dt*8);
       p.moveDirX += (dirX-p.moveDirX)*smoothT;
       p.moveDirY += (dirY-p.moveDirY)*smoothT;
-      const step = Math.min(speed*(Game.diffCfg?Game.diffCfg.aiSpeed:1)*dt, len);
+      const step = Math.min(speed*cpuCfg(p.team,'aiSpeed')*dt, len);
       p.x += p.moveDirX*step;
       p.y += p.moveDirY*step;
       if(Math.abs(p.moveDirX) > 0.35) p.facing = p.moveDirX>0?1:-1;   // only flip on clear horizontal intent
       p.moving = true;
       p.animT += dt*(sprinting?14:10);
     }
-    if(p.jumping){
-      p.jumpVel -= 720*dt;
-      p.jumpH += p.jumpVel*dt;
-      if(p.jumpH<=0){ p.jumpH=0; p.jumping=false; }
-    }
+    stepJump(p, dt);
     clampP(p);
   });
 
@@ -2770,6 +3243,12 @@ function updateAI(dt){
     Game.pendingAssist.t -= dt;
     if(Game.pendingAssist.t<=0) Game.pendingAssist=null;
   }
+}
+// AI shooters have a release timing that improves with team rating
+function aiShoot(p){
+  const r = teamRating(p.team) * cpuCfg(p.team,'aiSkill');
+  const spread = Math.max(0.06, 0.28 - (r-1)*0.25);
+  releaseShot(p, 0.5 + (Math.random()*2-1)*spread);
 }
 
 /* ---------------- float text / camera ---------------- */
@@ -2782,8 +3261,20 @@ function updateFloatTexts(dt){
 }
 function updateCamera(dt){
   const viewW = canvas.width/ZOOM;   // how much court width is visible after zoom-out
-  const target = Math.max(0, Math.min(COURT.W - viewW, Game.ball.x - viewW/2));
-  Game.camX += (target-Game.camX)*Math.min(1, dt*6);
+  const b = Game.ball;
+  let focus = b.x;
+  if(!Game.versus && Game.user){
+    // lean toward the ball but never lose your own player off-screen
+    focus = b.x*0.65 + Game.user.x*0.35;
+  }
+  let target = focus - viewW/2;
+  if(!Game.versus && Game.user){
+    const m = 150;
+    target = Math.max(target, Game.user.x + m - viewW);
+    target = Math.min(target, Game.user.x - m);
+  }
+  target = Math.max(0, Math.min(COURT.W - viewW, target));
+  Game.camX += (target-Game.camX)*Math.min(1, dt*5);
   if(Game.shakeT>0) Game.shakeT = Math.max(0, Game.shakeT-dt);
 }
 function screenShake(mag, dur){
@@ -2796,7 +3287,25 @@ function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }
 /* =========================================================================
    RENDERING
 ========================================================================= */
+// the court, crowd, benches and hoops never change during a game — draw them once
+let courtCache = null;
+const IS_TOUCH = !!(window.matchMedia && window.matchMedia('(hover:none) and (pointer:coarse)').matches);
+function buildCourtCache(){
+  const W = COURT.W+80, H = WORLD_H;
+  if(!courtCache){ courtCache = document.createElement('canvas'); }
+  courtCache.width = W; courtCache.height = H;
+  const real = ctx;
+  ctx = courtCache.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.save(); ctx.translate(40,0);
+  drawCourt();
+  drawHoop(COURT.hoopLeftX, true);
+  drawHoop(COURT.hoopRightX, false);
+  ctx.restore();
+  ctx = real;
+}
 function render(){
+  ctx.imageSmoothingEnabled = false;
   ctx.fillStyle='#0e1524';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.save();
@@ -2809,9 +3318,8 @@ function render(){
   }
   ctx.translate(-Math.round(Game.camX)+shX, shY);
 
-  drawCourt();
-  drawHoop(COURT.hoopLeftX, true);
-  drawHoop(COURT.hoopRightX, false);
+  if(courtCache) ctx.drawImage(courtCache, -40, 0);
+  else { drawCourt(); drawHoop(COURT.hoopLeftX, true); drawHoop(COURT.hoopRightX, false); }
 
   const list = Game.all.slice().sort((a,b)=>a.y-b.y);
   if(Game.ball.holder){
@@ -2829,26 +3337,43 @@ function render(){
   drawFloats();
   ctx.restore();
 
+  drawOffscreenMarker(Game.user, '#34d399');
+  if(Game.versus) drawOffscreenMarker(Game.user2, '#22d3ee');
   drawScoreboard();
   drawStamina();
   drawSpecialMeters();
   if(Game.shotMeter.active) drawMeter(Game.shotMeter, Game.user, false);
   if(Game.versus && Game.shotMeter2.active) drawMeter(Game.shotMeter2, Game.user2, true);
-  if(Game.shotPopup) drawPopup();
+  if(Game.shotPopup) drawPopup(Game.shotPopup, Game.versus ? canvas.width*0.25 : canvas.width/2);
+  if(Game.shotPopup2) drawPopup(Game.shotPopup2, canvas.width*0.75);
   if(Game.freeThrow) drawFreeThrow();
   if(Game.banner) drawBanner();
 
-  ctx.fillStyle='rgba(255,255,255,0.5)';
   ctx.font='10px monospace';
   ctx.textAlign='left';
-  if(Game.versus){
+  if(IS_TOUCH){ /* on-screen buttons replace the keyboard hints */ }
+  else if(Game.versus){
     ctx.fillStyle=Game.teamHome.secondary;
-    ctx.fillText('P1: WASD move · Shift sprint · Space shoot · X pass/steal · C special · 1/2/3 plays', 10, canvas.height-20);
+    ctx.fillText('P1: WASD move · LShift sprint · Space shoot/block · X pass/steal · C special · 1/2/3 plays', 10, canvas.height-20);
     ctx.fillStyle=Game.teamAway.secondary;
-    ctx.fillText('P2: Arrows move · RShift sprint · / shoot · . pass/steal · RCtrl special', 10, canvas.height-8);
+    ctx.fillText('P2: Arrows move · RShift sprint · / shoot/block · . pass/steal · RCtrl special', 10, canvas.height-8);
   } else {
-    ctx.fillText('WASD Move · SHIFT Sprint · SPACE Shoot/Jump · X Pass/Steal · C Special · 1/2/3 Plays · M '+(Audio8._muted?'Unmute':'Mute'), 10, canvas.height-8);
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.fillText('WASD Move · SHIFT Sprint · SPACE hold+release Shoot / Block · X Pass/Call/Steal · C Special · 1/2/3 Plays · M '+(Audio8._muted?'Unmute':'Mute')+' · ESC Pause', 10, canvas.height-8);
   }
+}
+// arrow at the screen edge pointing to a human player who is off-camera
+function drawOffscreenMarker(p, col){
+  if(!p) return;
+  const sx = (p.x - Game.camX)*ZOOM;
+  if(sx>=10 && sx<=canvas.width-10) return;
+  const left = sx<10;
+  const x = left ? 14 : canvas.width-14, y = (p.y-60)*ZOOM;
+  ctx.fillStyle=col;
+  ctx.beginPath();
+  if(left){ ctx.moveTo(x-8,y); ctx.lineTo(x+6,y-9); ctx.lineTo(x+6,y+9); }
+  else { ctx.moveTo(x+8,y); ctx.lineTo(x-6,y-9); ctx.lineTo(x-6,y+9); }
+  ctx.fill();
 }
 
 function drawBanner(){
@@ -2894,22 +3419,23 @@ function drawSpecialBar(x,y,val,col,label){
 
 function drawFreeThrow(){
   const ft=Game.freeThrow;
-  ctx.fillStyle='rgba(10,15,25,0.6)';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='rgba(10,15,25,0.55)';
+  ctx.fillRect(0,96,canvas.width,110);
   ctx.fillStyle='#ffd166'; ctx.font='bold 22px monospace'; ctx.textAlign='center';
-  ctx.fillText(`FREE THROW  (${ft.remaining} left)`, canvas.width/2, 120);
+  const who = ft.shooter.isUser ? (Game.versus?'P1':S.player.name) : ft.shooter.isUser2 ? 'P2' : (ft.shooter.team==='home'?Game.teamHome.abbr:Game.teamAway.abbr)+' #'+ft.shooter.jerseyNum;
+  ctx.fillText(`FREE THROW ${ft.total-ft.remaining+1}/${ft.total} — ${who}`, canvas.width/2, 124);
   if(ft.state==='aim'){
     const isHuman = ft.shooter.isUser||ft.shooter.isUser2;
     ctx.fillStyle='#eaf0f8'; ctx.font='13px monospace';
-    ctx.fillText(isHuman? `Tap ${ft.shooter.isUser?'SPACE':'/'} in the green to sink it` : 'Shooting…', canvas.width/2, 150);
+    ctx.fillText(isHuman? `Tap ${ft.shooter.isUser?'SPACE':'/'} when the marker is in the green` : 'Shooting…', canvas.width/2, 150);
     const bw=200,bh=18,bx=canvas.width/2-bw/2,by=170;
     ctx.fillStyle='#1a2438'; ctx.fillRect(bx,by,bw,bh);
     ctx.fillStyle='rgba(52,211,153,0.5)'; ctx.fillRect(bx+bw*0.42,by,bw*0.16,bh);
     ctx.fillStyle='#ffd166'; ctx.fillRect(bx+ft.meter*bw-2,by-3,4,bh+6);
     ctx.strokeStyle='#ff7a29'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
   } else {
-    ctx.fillStyle=ft.made?'#34d399':'#f87171'; ctx.font='bold 26px monospace';
-    ctx.fillText(ft.made?'SWISH!':'MISS', canvas.width/2, 175);
+    if(ft.resolved){ ctx.fillStyle=ft.made?'#34d399':'#f87171'; ctx.font='bold 26px monospace';
+      ctx.fillText(ft.made?'SWISH!':'MISS', canvas.width/2, 180); }
   }
   ctx.textAlign='left';
 }
@@ -2950,8 +3476,11 @@ function drawCourt(){
   ctx.strokeStyle=W; ctx.lineWidth=4;
   ctx.beginPath(); ctx.arc(COURT.W/2, COURT.hoopY, 60, 0, Math.PI*2); ctx.stroke();
 
+  ctx.save();
+  ctx.beginPath(); ctx.rect(COURT.inLeft, COURT.inTop, COURT.inRight-COURT.inLeft, COURT.inBottom-COURT.inTop); ctx.clip();
   drawEnd(COURT.inLeft, 1);
   drawEnd(COURT.inRight, -1);
+  ctx.restore();
 
   function drawEnd(baseX, dir){
     const paintL=240, paintH=240;
@@ -3037,16 +3566,38 @@ function drawHoop(hx, isLeft){
 }
 
 function pickGrid(p){
-  if(p.shootPose>0) return p.sprites.shoot;
-  if(p.jumpH>0) return p.hasBall ? p.sprites.shoot : p.sprites.block;
-  if(p.moving) return (Math.floor(p.animT*2)%2===0) ? p.sprites.runA : p.sprites.runB;
-  return p.sprites.stand;
+  if(p.shootPose>0) return 'shoot';
+  if(p.jumpH>0) return p.hasBall ? 'shoot' : 'block';
+  if(p.moving) return (Math.floor(p.animT*2)%2===0) ? 'runA' : 'runB';
+  return 'stand';
+}
+// each (team, look, pose, facing) combo is rendered once to a tiny canvas and reused
+const SPRITE_CACHE = new Map();
+function cachedSprite(p, pose){
+  const team = p.team==='home'?Game.teamHome:Game.teamAway;
+  const key = `${team.abbr}|${p.skinIdx}|${p.hairIdx}|${p.hairStyle}|${pose}|${p.facing<0?'L':'R'}`;
+  let cv = SPRITE_CACHE.get(key);
+  if(cv) return cv;
+  cv = document.createElement('canvas'); cv.width=SPRITE_W; cv.height=SPRITE_H;
+  const c = cv.getContext('2d');
+  const pal = spritePalette(team, p.skinIdx, p.hairIdx);
+  const grid = p.sprites[pose];
+  for(let r=0;r<grid.length;r++){
+    const row = grid[r];
+    for(let col=0;col<row.length;col++){
+      const ch=row[col]; if(ch==='.') continue;
+      c.fillStyle = pal[ch]||'#f0f';
+      c.fillRect(p.facing<0 ? (SPRITE_W-1-col) : col, r, 1, 1);
+    }
+  }
+  if(SPRITE_CACHE.size>600) SPRITE_CACHE.clear();
+  SPRITE_CACHE.set(key, cv);
+  return cv;
 }
 
 function drawPlayerSpr(p){
   const sc = SC * (p.scale||1);
-  const grid = pickGrid(p);
-  const pal = spritePalette(p.team==='home'?Game.teamHome:Game.teamAway, p.skinIdx, p.hairIdx);
+  const pose = pickGrid(p);
   const w = SPRITE_W*sc, h = SPRITE_H*sc;
   const footY = p.y - (p.jumpH||0);
   const ox = Math.round(p.x - w/2), oy = Math.round(footY - h);
@@ -3069,16 +3620,7 @@ function drawPlayerSpr(p){
     ctx.strokeRect(ox-2, oy-2, w+4, h+4);
   }
 
-  for(let r=0;r<grid.length;r++){
-    const row = grid[r];
-    for(let c=0;c<row.length;c++){
-      const ch=row[c];
-      if(ch==='.') continue;
-      ctx.fillStyle = pal[ch]||'#f0f';
-      const cc = p.facing<0 ? (SPRITE_W-1-c) : c;
-      ctx.fillRect(ox+cc*sc, oy+r*sc, Math.ceil(sc), Math.ceil(sc));
-    }
-  }
+  ctx.drawImage(cachedSprite(p, pose), ox, oy, Math.round(w), Math.round(h));
 
   // jersey number
   const numStr = String(p.jerseyNum).padStart(2,'0');
@@ -3107,7 +3649,9 @@ function drawPlayerSpr(p){
     ctx.fillStyle='#34d399';
     ctx.font='bold 11px monospace';
     ctx.textAlign='center';
-    ctx.fillText(Game.versus?'P1':S.player.name, p.x, oy-8);
+    ctx.fillText(Game.versus?'P1':S.player.name.toUpperCase(), p.x, oy-8);
+    // little arrow over your head so you never lose yourself in a crowd
+    ctx.beginPath(); ctx.moveTo(p.x-6, oy-28); ctx.lineTo(p.x+6, oy-28); ctx.lineTo(p.x, oy-21); ctx.fill();
     ctx.textAlign='left';
   }
   if(p.isUser2){
@@ -3161,7 +3705,8 @@ function drawScoreboard(){
   ctx.font='bold 14px monospace'; ctx.fillText(Game.teamAway.abbr, bx+bw-43, 18);
   ctx.font='bold 19px monospace'; ctx.fillText(String(Game.scoreAway), bx+bw-43, 38);
   ctx.fillStyle='#ffd166';
-  ctx.font='bold 13px monospace'; ctx.fillText(`Q${Game.quarter} ${Math.max(0,Game.quarterTime).toFixed(0)}s`, bx+bw/2, 17);
+  const qt=Math.max(0,Game.quarterTime);
+  ctx.font='bold 13px monospace'; ctx.fillText(`${periodLabel()}  ${qt<10 ? qt.toFixed(1) : Math.ceil(qt)}s`, bx+bw/2, 17);
   // shot clock — turns red under 5s
   ctx.fillStyle = Game.shotClock<5 ? '#f87171' : '#22d3ee';
   ctx.font='bold 17px monospace'; ctx.fillText(`:${Math.ceil(Math.max(0,Game.shotClock)).toString().padStart(2,'0')}`, bx+bw/2, 38);
@@ -3170,6 +3715,11 @@ function drawScoreboard(){
   ctx.fillText(`FLS ${Game.foulsHome}`, bx+90, 40);
   ctx.textAlign='right';
   ctx.fillText(`FLS ${Game.foulsAway}`, bx+bw-90, 40);
+  // possession indicator
+  const b=Game.ball, pos = b.holder ? b.holder.team : b.passing ? b.passTeam : null;
+  ctx.fillStyle='#ffd166'; ctx.textAlign='left';
+  if(pos==='home') ctx.fillText('◀ BALL', bx+90, 27);
+  if(pos==='away'){ ctx.textAlign='right'; ctx.fillText('BALL ▶', bx+bw-90, 27); }
   ctx.textAlign='left';
 }
 
@@ -3193,8 +3743,9 @@ function drawMeter(meter, shooter, isP2){
   ctx.fillStyle='rgba(0,0,0,0.7)';
   ctx.fillRect(bx-4,by-4,barW+8,barH+8);
   ctx.fillStyle='#1a2438'; ctx.fillRect(bx,by,barW,barH);
-  ctx.fillStyle='rgba(52,211,153,0.55)';
-  ctx.fillRect(bx+barW*0.42, by, barW*0.16, barH);
+  const half = sweetSpotHalf(shooter);
+  ctx.fillStyle='rgba(52,211,153,0.6)';
+  ctx.fillRect(bx+barW*(0.5-half), by, barW*half*2, barH);
   ctx.fillStyle='#ffd166';
   ctx.fillRect(bx+meter.t*barW-2, by-3, 4, barH+6);
   ctx.strokeStyle='#ff7a29'; ctx.lineWidth=2; ctx.strokeRect(bx,by,barW,barH);
@@ -3202,18 +3753,17 @@ function drawMeter(meter, shooter, isP2){
   ctx.fillStyle = chance>0.6?'#34d399':chance>0.35?'#ffd166':'#f87171';
   ctx.font='bold 14px monospace';
   ctx.textAlign='center';
-  ctx.fillText(`${Math.round(chance*100)}%`, cx, by-10);
+  ctx.fillText(`${Math.round(chance*100)}%  ${computeShotChance(shooter,0.5).isThree?'3PT':'2PT'}`, cx, by-10);
   ctx.textAlign='left';
 }
 
-function drawPopup(){
-  const sp=Game.shotPopup;
+function drawPopup(sp, cx){
   const tn=sp.t/sp.dur;
   const scale = tn<0.15 ? tn/0.15 : 1;
   const alpha = tn>0.75 ? 1-((tn-0.75)/0.25) : 1;
   ctx.save();
   ctx.globalAlpha=Math.max(0,alpha);
-  ctx.translate(canvas.width/2, 84);
+  ctx.translate(cx, 84);
   ctx.scale(scale,scale);
   ctx.font='bold 20px monospace';
   const w = ctx.measureText(sp.text).width+32;
@@ -3231,21 +3781,30 @@ function drawPopup(){
 /* =========================================================================
    END OF GAME
 ========================================================================= */
+function boxScoreHTML(won){
+  const st=Game.stats;
+  const pct=(m,a)=>a?` (${Math.round(m/a*100)}%)`:'';
+  return `<div class="boxScore"><b>${won?'WIN':'LOSS'}</b> · ${Game.teamHome.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}<br/>
+    ${S.player.name}: <b>${st.points}</b> PTS · ${st.rebounds} REB · ${st.assists} AST · ${st.steals} STL · ${st.blocks} BLK · ${st.to} TO<br/>
+    FG ${st.fgm}/${st.fga}${pct(st.fgm,st.fga)} · 3PT ${st.tpm}/${st.tpa} · FT ${st.ftm}/${st.fta}</div>`;
+}
 function endGame(){
+  if(Game.over) return;
   Game.over=true;
   Platform.gameplayStop();
   Audio8.buzzer();
+  for(const k in KEYS) KEYS[k]=false;
   const won = Game.scoreHome > Game.scoreAway;
 
   // LOCAL VERSUS: show a winner banner then back to the menu
   if(S.mode==='versus'){
-    const p1win = Game.scoreHome>Game.scoreAway;
+    const p1win = won;
     document.getElementById('mvpText').textContent =
-      `${p1win?'Player 1':'Player 2'} wins! Final: ${Game.teamHome.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr}.`;
+      `${p1win?'Player 1':'Player 2'} wins! Final: ${Game.teamHome.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr}${Game.quarter>4?' (OT)':''}.`;
     document.querySelector('#screen-trophy h1').textContent = p1win?'🏆 PLAYER 1 WINS':'🏆 PLAYER 2 WINS';
     document.getElementById('btnPostChamp').textContent='Back to Menu';
     Audio8.badge();
-    drawTrophyArt();
+    drawTrophyArt(p1win?Game.teamHome:Game.teamAway, 'WIN');
     showScreen('screen-trophy');
     return;
   }
@@ -3253,38 +3812,51 @@ function endGame(){
   // FRANCHISE MODE: report to the dashboard, no MVP career progression
   if(S.mode==='franchise'){
     frAdvanceAfterGame(won, Game.scoreHome, Game.scoreAway);
+    autoSave();
     renderFranchise();
-    document.getElementById('frMsg').textContent =
-      `Final: ${S.team.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr} (${won?'WIN':'LOSS'})`;
+    flash('frMsg', `Final: ${S.team.abbr} ${Game.scoreHome} — ${Game.scoreAway} ${Game.teamAway.abbr} (${won?'WIN':'LOSS'})`, won?'var(--success)':'var(--danger)');
+    document.getElementById('frBox').innerHTML = boxScoreHTML(won);
     showScreen('screen-franchise');
     return;
   }
 
+  checkSponsor();
   if(won) S.season.wins++; else S.season.losses++;
-  gainXP(Game.stats.points*2 + Game.stats.assists*3 + Game.stats.rebounds*2 + Game.stats.steals*5 + Game.stats.blocks*5 + (won?30:5));
-  S.spMultiplierNextGame = (S.sponsor && S.sponsor.done) ? S.sponsor.mult : 1;
+  const lvBefore = S.player.level;
+  const xp = Game.stats.points*2 + Game.stats.assists*3 + Game.stats.rebounds*2 + Game.stats.steals*5 + Game.stats.blocks*5 + (won?30:8);
+  gainXP(xp);
+  const sponsorHit = S.sponsor && S.sponsor.done;
+  S.spMultiplierNextGame = sponsorHit ? S.sponsor.mult : 1;
   S.sponsor = null;
+  S.season.oppIdx = null;   // a new opponent next game
+  const lvNote = S.player.level>lvBefore ? ` LEVEL UP → ${S.player.level}! Spend your skill points below.` : '';
+  const spNote = sponsorHit ? ` Sponsor goal met: ${S.spMultiplierNextGame}x SP next game!` : '';
 
   if(won){
     if(S.season.round<2){
       const fin = S.season.round;
       S.season.round++;
+      autoSave();
       renderHub();
-      document.getElementById('hubMsg').textContent = `Victory! ${STORY.win[fin]} Advancing to ${ROUND_NAMES[S.season.round]}.`;
+      flash('hubMsg', `Victory! ${STORY.win[fin]} Advancing to ${ROUND_NAMES[S.season.round]}. +${xp} XP.${lvNote}${spNote}`, 'var(--success)');
+      document.getElementById('hubBox').innerHTML = boxScoreHTML(true);
       showScreen('screen-hub');
     } else {
       S.season.round=3;
+      autoSave();
       showTrophy();
     }
   } else {
     S.season.round=0; S.season.wins=0; S.season.losses=0;
+    autoSave();
     renderHub();
-    document.getElementById('hubMsg').textContent = STORY.lose;
+    flash('hubMsg', `${STORY.lose} +${xp} XP.${lvNote}${spNote}`, 'var(--danger)');
+    document.getElementById('hubBox').innerHTML = boxScoreHTML(false);
     showScreen('screen-hub');
   }
 }
 
-function drawTrophyArt(){
+function drawTrophyArt(team, label){
   const tc=document.getElementById('trophyCanvas');
   const t=tc.getContext('2d');
   t.imageSmoothingEnabled=false;
@@ -3303,7 +3875,8 @@ function drawTrophyArt(){
   px(140,170,20,50,'#e0b400');
   px(110,220,80,20,'#5a3a1a');
   t.fillStyle='#fff'; t.font='bold 14px monospace'; t.textAlign='center';
-  t.fillText('MVP',150,90);
+  t.fillText(label||'MVP',150,90);
+  if(team){ t.fillStyle=team.primary; t.fillRect(110,222,80,16); t.fillStyle='#fff'; t.font='bold 11px monospace'; t.fillText(team.abbr,150,234); }
   t.textAlign='left';
 }
 
@@ -3312,11 +3885,15 @@ function showTrophy(){
   document.querySelector('#screen-trophy h1').textContent = '🏆 FINALS MVP 🏆';
   document.getElementById('btnPostChamp').textContent = 'Continue My Journey';
   document.getElementById('mvpText').textContent =
-    `${S.player.name} led the ${S.team.name} to the championship! Final: ${Game.scoreHome}-${Game.scoreAway}. The city will remember this run — but a new season awaits.`;
-  Audio8.badge();
-  drawTrophyArt();
+    `${S.player.name} led the ${S.team.name} to the championship! Final: ${Game.scoreHome}-${Game.scoreAway} with ${Game.stats.points} points, ${Game.stats.rebounds} boards and ${Game.stats.assists} dimes. The city will remember this run — but a new season awaits.`;
+  Audio8.badge(); Audio8.cheer(true);
+  drawTrophyArt(S.team, 'MVP');
 }
 
+refreshContinue();
+// debug handle for automated tests (read-only use)
+if(/[?&#]debug/.test(location.href)) window.__HL = { get Game(){ return Game; }, get S(){ return S; }, KEYS,
+  tick(n){ for(let i=0;i<n && Game && !Game.over;i++) update(1/60); if(Game && !Game.over) render(); } };
 })();
 </script>
 </body>
