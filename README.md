@@ -15,6 +15,10 @@ in a browser and play.
 - Save/load with 3 manual slots plus an autosave after every game ("Continue"
   on the main menu). No `prompt()`/`alert()` dialogs, so it works inside
   portal iframes.
+- Five courts to pick from the title screen: Pro Arena, Blacktop, Beach,
+  Old Gym and Rooftop (or Random).
+- Ball physics: true parabolic shots to an elevated rim, rim and backboard
+  bounces, physical passes that lead the receiver, and out-of-bounds calls.
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
   (Web Audio API, no audio files), difficulty levels, and touch controls that
   auto-appear on phones/tablets.
