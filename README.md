@@ -5,6 +5,14 @@ No build step, no external assets, no network calls — open `basketball-rpg.htm
 in a browser and play.
 
 ## What's inside
+- **Quick Play**: straight into a game against the CPU, no setup.
+- **Tournament**: eight teams, single elimination, every round tougher.
+- **1 v 1, 3 v 3 or 5 v 5** for Quick Play, Tournament and Versus.
+- **Locker + coins**: earn coins in every mode and unlock star players (each
+  with their own ratings), ball skins and shoes. No purchases, everything is
+  earned by playing. Three **daily challenges** pay bonus coins.
+- **3-Point Contest**: five racks in sixty seconds, money balls worth two,
+  best score saved.
 - **My Journey**: create a player (position, height, attributes, skin tone,
   hair, jersey number), get drafted by a fictional franchise, and chase a
   championship across a 3-round playoff bracket.
@@ -12,18 +20,39 @@ in a browser and play.
   standings, sim or play games, trades (including tradeable future draft
   picks), an end-of-season rookie draft, and player development/retirement.
 - **Local 2-player versus** on one keyboard.
+- Save/load with 3 manual slots plus an autosave after every game ("Continue"
+  on the main menu). No `prompt()`/`alert()` dialogs, so it works inside
+  portal iframes.
+- Five courts to pick from the title screen: Pro Arena, Blacktop, Beach,
+  Old Gym and Rooftop (or Random).
+- Real ball physics: shots fly a true arc and collide with the rim and
+  backboard, so rattles, rolls, bank shots, in-and-outs and put-backs happen
+  on their own. Passes lead the receiver; out-of-bounds is called.
+- Animated pixel players built from a skeleton: run and sprint cycles,
+  dribbling with the ball in the hand, defensive slides, jump-shot gather and
+  release, layups, dunks and celebrations. Floor reflections, a crowd that
+  jumps on big plays, arena lighting, ball trails, slow motion on dunks.
+- Alley-oops (call for one near the rim, or lob it to a cutter) and pump fakes.
+- Driving and contact: attack-dribble drives, spin moves, euro steps on
+  contested layups, hanging on the rim after dunks, and knockdowns with a
+  full fall-and-get-up animation (broken ankles, posterizers, charges,
+  blocking fouls, hard fouls).
+- Instant replays of dunks, alley-oops, posters and buzzer-beaters
+  (slow motion, skippable, can be turned off in Settings).
+- Settings (quarter length, screen shake, coaching tips), first-game coaching
+  tips, and gamepad support (two pads for Versus).
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
   (Web Audio API, no audio files), difficulty levels, and touch controls that
   auto-appear on phones/tablets.
 
 ## Publishing
-- **itch.io**: run `web/make-itch-build.sh`, upload the resulting
-  `web/hoop-legends-web.zip`, mark it "played in the browser". See
-  `web/README.md`.
-- **Poki / CrazyGames**: SDK hooks are already wired via a no-op-safe
-  `Platform` shim; see `web/README.md` for the script tag to add.
-- **Steam / desktop**: a lightweight Tauri v2 wrapper lives in `desktop/`;
-  see `desktop/README.md`.
+Ready-to-upload files are in `release/` (Poki, CrazyGames and itch.io zips plus
+store art). Live build: https://hoop-legends-nine.vercel.app
+
+Run `web/make-portal-build.sh` to get upload-ready zips for itch.io, Poki and
+CrazyGames (the right SDK script is added for each), plus store art in
+`web/assets/`. See `web/README.md` for what the SDK integration does and how to
+submit. A lightweight Tauri v2 wrapper for Steam/desktop lives in `desktop/`.
 
 Everything (art, music, names, teams) is original and safe for commercial
 distribution.
