@@ -495,7 +495,7 @@
         <p class="small-txt" style="max-width:520px;line-height:1.8">
           <b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> hold &amp; release in the green to shoot (jump/block on D)<br/>
           <b>X</b> pass · call for the ball (near the rim: alley-oop) · steal &nbsp;·&nbsp; <b>C</b> special (dunk near rim / crossover / lockdown)<br/>
-          Quick tap of <b>Space</b> = pump fake &nbsp;·&nbsp; 
+          Quick tap of <b>Space</b> = pump fake &nbsp;·&nbsp; <b>C</b> before your special is charged = spin move &nbsp;·&nbsp; 
           <b>1/2/3</b> plays: iso · pick &amp; roll · fast break &nbsp;·&nbsp; <b>M</b> mute &nbsp;·&nbsp; <b>Esc/P</b> pause
         </p>
         <div class="row"><button id="btnResume">Resume</button></div>
@@ -515,6 +515,8 @@
         <div><div class="seg" data-pref="qlen"><button class="diffBtn" data-v="1">1 min</button><button class="diffBtn" data-v="2">2 min</button><button class="diffBtn" data-v="3">3 min</button></div></div>
         <div class="optLabel">Screen shake</div>
         <div><div class="seg" data-pref="shake"><button class="diffBtn" data-v="on">On</button><button class="diffBtn" data-v="off">Off</button></div></div>
+        <div class="optLabel">Instant replays</div>
+        <div><div class="seg" data-pref="replays"><button class="diffBtn" data-v="on">On</button><button class="diffBtn" data-v="off">Off</button></div></div>
         <div class="optLabel">Coaching tips</div>
         <div><div class="seg" data-pref="tips"><button class="diffBtn" data-v="on">On</button><button class="diffBtn" data-v="off">Off</button></div></div>
         <div class="optLabel">Controls</div>
@@ -1622,7 +1624,7 @@ document.getElementById('btnPostMenu').addEventListener('click', ()=>{ Audio8.cl
 
 /* ---------------- SETTINGS ---------------- */
 function syncSettings(){
-  const cur = { qlen:String(PREFS.qlen||1), shake:PREFS.shake==='off'?'off':'on', tips:PREFS.tips==='off'?'off':'on' };
+  const cur = { qlen:String(PREFS.qlen||1), shake:PREFS.shake==='off'?'off':'on', tips:PREFS.tips==='off'?'off':'on', replays:PREFS.replays==='off'?'off':'on' };
   document.querySelectorAll('#settingsModal .seg').forEach(seg=>{
     seg.querySelectorAll('.diffBtn').forEach(b=>b.classList.toggle('sel', b.dataset.v===cur[seg.dataset.pref]));
   });
@@ -3058,6 +3060,7 @@ function gameLoop(now, id){
 function update(dt){
   pollInput();
   if(Game.paused) return;   // frozen while the pause menu is open
+  if(Game.replay){ Game.time+=dt; updateReplay(dt); return; }
   Game.time += dt;
   if(Game.banner){ Game.banner.t-=dt; if(Game.banner.t<=0) Game.banner=null; }
   if(Game.shootout){
@@ -3073,6 +3076,7 @@ function update(dt){
     if(Game.breakT<=0) startPeriod();
     return;
   }
+  updateBodies(dt);
   updateInput(dt);
   if(Game.versus) updateInput2(dt);
   updateAI(dt);
@@ -3087,10 +3091,13 @@ function update(dt){
   updatePlaybook(dt);
   updateShotClock(dt);
   updateClock(dt);
+  recordFrame();
+  if(Game.replayPending && Game.phase==='dead') maybeStartReplay();
 }
 
 function updatePoses(dt){
   Game.all.forEach(p=>{
+    if(p.hangT>0){ p.hangT-=dt; if(p.hangT<=0){ p.jumping=true; p.jumpVel=0; } }
     if(p.shootPose>0) p.shootPose-=dt;
     if(p.celebT>0 && !p.jumping) p.celebT-=dt;
     if(p.landT>0) p.landT-=dt;
@@ -3102,6 +3109,7 @@ function updatePoses(dt){
 }
 // shared jump physics for human players (AI players use the same in updateAI)
 function stepJump(p, dt){
+  if(p.hangT>0){ p.jumpH = Math.max(18, RIM_H-104*(p.scale||1)); p.jumpVel=0; return; }   // hanging on the rim
   if(!p.jumping) return;
   p.jumpVel -= 720*dt;
   p.jumpH += p.jumpVel*dt;
@@ -3217,8 +3225,9 @@ function updateInput(dt){
 
   const spdAttr = Game.versus ? 6 : (S.player.attrs.speed + heightSpdBonus());
   const spd = (150 + spdAttr*14) * sprintMult * (user.hasBall ? 0.94 : 1);
-  const wantMove = user.moving;
+  const wantMove = user.moving && !(user.spinT>0) && !(user.euroT>0);
   moveHuman(user, wantMove?dx:0, wantMove?dy:0, spd, dt);
+  checkCharge(user);
   if(wantSprint && user.moving){ user.dustT=(user.dustT||0)-dt; if(user.dustT<=0){ dust(user.x,user.y,1); user.dustT=0.16; } }
   if(wantMove){
     if(dx!==0) user.facing = dx>0?1:-1;
@@ -3234,7 +3243,7 @@ function updateInput(dt){
     Game.dirChangeTimer-=dt;
     if(!Game.versus && user.hasBall && S.player.badges.includes('speed') && !Game.ankleApplied){
       Game.away.forEach(def=>{
-        if(dist2(def,user)<80*80){ def.stunTimer=0.8; addFloat(def.x, def.y-90, "ANKLE BROKEN!", '#ff5577', 15); }
+        if(dist2(def,user)<80*80){ if(Math.random()<0.5) knockDown(def, Math.sign(def.x-user.x)||1, 'ANKLES!'); else { def.stunTimer=0.8; addFloat(def.x, def.y-90, "SHOOK", '#ff5577', 15); } }
       });
       Game.ankleApplied = true;
     }
@@ -3340,6 +3349,157 @@ function updateInput2(dt){
   }
 }
 
+/* ---------------- knockdowns, spin moves, euro steps, rim hangs ---------------- */
+const FALL_DUR = 1.15, SPIN_DUR = 0.36;
+// put a player on the floor: stumble, sit, get back up
+function knockDown(p, dir, text, col){
+  if(p.fallT>0) return;
+  p.fallT=FALL_DUR; p.stunTimer=Math.max(p.stunTimer, FALL_DUR);
+  p.knockV = dir*150; p.moving=false; p.mvx=0; p.mvy=0;
+  if(dir) p.facing = -dir;                       // falls away from the push, facing it
+  Game.shotMeter.active = p.isUser ? false : Game.shotMeter.active;
+  dust(p.x, p.y, 5); Audio8.block();
+  if(text) addFloat(p.x, p.y-120, text, col||'#ff5577', 16);
+  if(p.hasBall){                                  // lose the handle
+    const b=Game.ball;
+    freeBall(dir*-60 + (Math.random()*2-1)*50, (Math.random()*2-1)*60, 80, false);
+    b.hitRim=false; b.lastTouch=p.team; b.lastToucher=p;
+  }
+  Game.cheerT=Math.max(Game.cheerT||0, 1.0);
+  highlight('knockdown');
+}
+function updateBodies(dt){
+  Game.all.forEach(p=>{
+    if(p.fallT>0) p.fallT-=dt;
+    if(p.knockV){ p.x+=p.knockV*dt; p.knockV*=Math.max(0,1-7*dt); if(Math.abs(p.knockV)<4) p.knockV=0; clampP(p); }
+    if(p.spinT>0){
+      const before=p.spinT; p.spinT-=dt;
+      if(before>SPIN_DUR/2 && p.spinT<=SPIN_DUR/2) p.facing=-p.facing;           // whip around...
+      if(p.spinT<=0) p.facing=p.spinDir;                                          // ...and come out attacking
+      p.x+=p.spinDir*190*dt; clampP(p);
+    }
+    if(p.euroT>0){ p.euroT-=dt; p.x+=(p.euroTo.x-p.x)*Math.min(1,dt*10); p.y+=(p.euroTo.y-p.y)*Math.min(1,dt*10); }
+    if(p.spinCD>0) p.spinCD-=dt;
+    if(p.chargeCD>0) p.chargeCD-=dt;
+  });
+}
+// spin move (C when your special isn't charged): whip past the defender in front
+function spinMove(u){
+  if(!u.hasBall || u.spinCD>0 || u.fallT>0 || Game.phase!=='live') return false;
+  const dir = Math.sign(attackingHoopX(u.team)-u.x)||1;
+  u.spinT=SPIN_DUR; u.spinDir=dir; u.spinCD=1.3; u.facing=dir;
+  Audio8.squeak(); dust(u.x,u.y,3);
+  addFloat(u.x, u.y-120, 'SPIN!', '#22d3ee', 14);
+  const defs=u.team==='home'?Game.away:Game.home;
+  let near=null, nd=Infinity;
+  defs.forEach(d=>{ const dd=dist2(d,u); if(dd<nd && Math.sign(d.x-u.x)===dir){ nd=dd; near=d; } });
+  if(near && nd<70*70){
+    const beat = u.isUser && !Game.versus ? 0.25+S.player.attrs.speed*0.04 : 0.45;
+    if(Math.random()<beat*0.45) knockDown(near, dir, 'ANKLES!');
+    else if(Math.random()<beat){ near.stunTimer=Math.max(near.stunTimer,0.45); addFloat(near.x, near.y-110, 'BEAT', '#f2c14e', 13); }
+  }
+  return true;
+}
+// contested layup → sidestep the defender on the way up
+function maybeEuro(p, hx){
+  const defs=p.team==='home'?Game.away:Game.home, inward=inwardOf(hx);
+  const blocker=defs.find(d=>Math.abs(d.y-p.y)<45 && (d.x-p.x)*Math.sign(hx-p.x)>0 && dist2(d,p)<85*85 && !(d.fallT>0));
+  if(!blocker || Math.random()>(p.isUser?0.85:0.5)) return false;
+  const side = p.y<blocker.y ? -1 : 1;
+  p.euroT=0.3; p.euroTo={ x:p.x + Math.sign(hx-p.x)*28, y:clamp(p.y+side*46, COURT.inTop, COURT.inBottom) };
+  addFloat(p.x, p.y-130, 'EURO STEP', '#22d3ee', 13);
+  return true;
+}
+// offensive charge / blocking contact between a driving handler and a defender
+function checkCharge(h){
+  if(!h.hasBall || h.chargeCD>0 || Game.phase!=='live' || !(h.speedFrac>0.55)) return;
+  const dir=Math.sign(attackingHoopX(h.team)-h.x)||1;
+  const defs=h.team==='home'?Game.away:Game.home;
+  for(const d of defs){
+    if(d.fallT>0 || d.stunTimer>0) continue;
+    const dx=d.x-h.x, dy=d.y-h.y;
+    if(Math.sign(dx)!==dir || Math.abs(dx)>30 || Math.abs(dy)>20) continue;
+    h.chargeCD=1.0;
+    const planted = Math.hypot(d.vx||0, d.vy||0) < 45;
+    if(planted && Math.random()<0.4){
+      // offensive foul: the driver goes down, ball goes the other way
+      d.knockV=dir*70; dust(d.x,d.y,3);                                       // defender absorbs the hit
+      knockDown(h, -dir, 'CHARGE!', '#ffd166');
+      Audio8.whistle();
+      const other = h.team==='home'?'away':'home';
+      if(h.isUser) Game.stats.to++;
+      deadBall(()=>inboundAt(other, h.x, COURT.inTop-5), other, 1.0);
+      return;
+    }
+    if(!planted && Math.random()<0.3){
+      // blocking foul on the defender, who goes down
+      knockDown(d, dir, 'BLOCKING FOUL', '#ffd166');
+      Audio8.whistle();
+      commitFoul(h.team, h, false, d);
+      return;
+    }
+  }
+}
+
+/* ---------------- INSTANT REPLAY ----------------
+   Every frame of live play is recorded into a short ring buffer (positions + the
+   animation each player was in). After a highlight — dunk, alley-oop, poster,
+   ankle-breaker, buzzer-beater — the last couple of seconds play back in slow
+   motion during the dead ball. Any shoot/pass key skips it. */
+const REC_FRAMES = 200;
+function recordFrame(){
+  if(PREFS.replays==='off' || Game.shootout) return;
+  const b=Game.ball;
+  const snap = { camX:Game.camX, ball:{ x:b.x, y:b.y, h:b.h, spin:b.spin, inAir:b.inAir },
+    net:{ L:Game.net.L, R:Game.net.R },
+    ps: Game.all.map(p=>{ const pose=poseFor(p); return { p, x:p.x, y:p.y, jumpH:p.jumpH, facing:p.facing, landT:p.landT, pose:[pose[0],pose[1]] }; }) };
+  (Game.rec = Game.rec || []).push(snap);
+  if(Game.rec.length>REC_FRAMES) Game.rec.shift();
+}
+function highlight(reason){
+  if(PREFS.replays==='off' || Game.shootout || Game.replay) return;
+  if(reason==='knockdown' && Math.random()<0.5) return;                        // not every fall
+  if((Game.time - (Game.lastReplayAt||-99)) < 18) return;                       // don't spam replays
+  Game.replayPending = { reason, at:Game.time };
+}
+function maybeStartReplay(){
+  const rp=Game.replayPending;
+  if(!rp) return;
+  if(Game.time - rp.at > 2.4){ Game.replayPending=null; return; }      // the moment has passed
+  if(Game.time - rp.at < 0.55 || !Game.rec || Game.rec.length<60) return;
+  Game.replayPending=null; Game.lastReplayAt=Game.time;
+  const frames = Game.rec.slice(-150);
+  Game.replay = { frames, i:0, t:0, label: rp.reason==='oop'?'ALLEY-OOP' : rp.reason==='buzzer'?'BUZZER BEATER' : rp.reason==='dunk'?'SLAM' : 'REPLAY', keys:{ Space:true, KeyX:true, Slash:true, Period:true } };
+  Game.rec=[];
+}
+function updateReplay(dt){
+  const r=Game.replay;
+  r.t += dt*0.45*60;                                   // ~0.45x speed
+  r.i = Math.min(r.frames.length-1, Math.floor(r.t));
+  const skip = pressed('Space', r.keys) || pressed('KeyX', r.keys) || pressed('Slash', r.keys) || pressed('Period', r.keys);
+  if(r.t >= r.frames.length-1 || skip){ Game.replay=null; Game.lastFrame=performance.now(); }
+}
+function renderReplay(){
+  const r=Game.replay, f=r.frames[r.i];
+  const realBall=Game.ball, realNet=Game.net, realCam=Game.camX;
+  // draw the recorded frame with the normal renderer by swapping in the snapshot
+  Game.camX=f.camX; Game.ball=Object.assign({}, realBall, f.ball, { holder:null, trail:[], netDrop:0 }); Game.net=f.net;
+  const saved=f.ps.map(s=>{ const p=s.p; const o={ x:p.x, y:p.y, jumpH:p.jumpH, facing:p.facing, landT:p.landT, hasBall:p.hasBall, stunTimer:p.stunTimer, jumping:p.jumping };
+    p.x=s.x; p.y=s.y; p.jumpH=s.jumpH; p.facing=s.facing; p.landT=s.landT; p.poseOverride=s.pose; p.hasBall=false; p.stunTimer=0; p.jumping=s.jumpH>0; return o; });
+  Game.inReplay=true;
+  render();
+  Game.inReplay=false;
+  f.ps.forEach((s,i)=>{ Object.assign(s.p, saved[i]); s.p.poseOverride=null; });
+  Game.ball=realBall; Game.net=realNet; Game.camX=realCam;
+  // broadcast treatment: letterbox, tag, skip hint
+  const W=canvas.width, H=canvas.height;
+  P(0,0,W,46,'#000000'); P(0,H-46,W,46,'#000000');
+  P(18,12,120,24,'#e5534b'); pxText('REPLAY', 78, 17, 3, '#ffffff', 'center', '');
+  pxText(r.label, 150, 17, 3, '#f2c14e', 'left');
+  if(Math.floor(Game.time*2)%2===0){ P(W-34,18,12,12,'#e5534b'); }
+  pxText('PRESS SHOOT OR PASS TO SKIP', W/2, H-30, 2, '#8d8f96', 'center', '');
+}
+
 /* ---------------- pump fakes + alley-oops ---------------- */
 function rimDist(p){ return Math.hypot(p.x-attackingHoopX(p.team), p.y-COURT.hoopY); }
 function pumpFake(u){
@@ -3379,7 +3539,10 @@ function chargeSpecial(who, amt){
 function useSpecial(u, who){
   if(Game.shootout) return;
   const meter = who===1 ? Game.special : Game.special2;
-  if(meter < 100) { addFloat(u.x,u.y-90,`CHARGING ${Math.floor(meter)}%`,'#8fa0b8',13); return; }
+  if(meter < 100){
+    if(u.hasBall && spinMove(u)) return;               // no special yet: C is a spin move
+    addFloat(u.x,u.y-90,`SPECIAL ${Math.floor(meter)}%`,'#8fa0b8',13); return;
+  }
   if(Game.phase!=='live' && u.hasBall) return;
   const hx = attackingHoopX(u.team);
   if(u.hasBall){
@@ -3406,7 +3569,7 @@ function useSpecial(u, who){
       // CROSSOVER — juke: stun the nearest defender and burst forward
       const defs = u.team==='home'?Game.away:Game.home;
       let near=null,nd=Infinity; defs.forEach(df=>{ const d=dist2(df,u); if(d<nd){nd=d;near=df;} });
-      if(near && nd<160*160){ near.stunTimer=1.0; addFloat(near.x,near.y-90,"BROKEN!",'#ff5577',16); }
+      if(near && nd<160*160){ knockDown(near, Math.sign(near.x-u.x)||1, 'ANKLES BROKEN!'); }
       u.x += (u.team==='home'?1:-1)*70;
       clampP(u);
       addFloat(u.x,u.y-90,"CROSSOVER!",'#22d3ee',16);
@@ -3634,6 +3797,7 @@ function releaseShot(shooter, meterT){
   if(isLayup){
     shooter.jumping = true; shooter.jumpVel = 270; shooter.jumpH = Math.max(shooter.jumpH,1);
     shooter.shootPose = 0.45;
+    if(maybeEuro(shooter, hx) && b.blockBy && Math.random()<0.7) b.blockBy=null;   // the euro dodges the block
     Audio8.squeak();
   } else {
     shooter.jumping = true; shooter.jumpVel = 200; shooter.jumpH = Math.max(shooter.jumpH,1);
@@ -3851,7 +4015,7 @@ function resolveShot(){
     if(clutch){ addFloat(shooter.x, shooter.y-120, "CLUTCH!", '#2ee6ff', 20); screenShake(6, 0.25); }
     if(buzzerBeater){
       addFloat(b.hoopX, COURT.hoopY-RIM_H-60, "BUZZER BEATER!", '#2ee6ff', 22); screenShake(10, 0.4); buzz([60,30,60,30,80]);
-      Game.slowmo=0.8; Game.cheerT=2.5;
+      Game.slowmo=0.8; Game.cheerT=2.5; highlight('buzzer');
       const t = shooter.team==='home'?Game.teamHome:Game.teamAway;
       confetti(b.hoopX + inwardOf(b.hoopX)*120, COURT.hoopY, [t.primary, t.secondary, '#ffffff']);
     }
@@ -3873,7 +4037,13 @@ function resolveShot(){
         addFloat(shooter.x, shooter.y-120, `${Game.userStreak} STRAIGHT`, '#ff8c00', 16);
       }
     }
-    if(b.dunk){ screenShake(9, 0.35); Game.rimShake[side]=0.4; Game.hitstop=0.08; Game.cheerT=1.8; }
+    if(b.dunk){
+      screenShake(9, 0.35); Game.rimShake[side]=0.4; Game.hitstop=0.08; Game.cheerT=1.8;
+      shooter.hangT=0.5; shooter.jumping=false;
+      const victim=(shooter.team==='home'?Game.away:Game.home).find(d=>Math.abs(d.x-b.hoopX)<80 && Math.abs(d.y-COURT.hoopY)<60 && !(d.fallT>0));
+      if(victim && Math.random()<0.7){ knockDown(victim, inwardOf(b.hoopX), 'POSTERIZED!', '#ff8c00'); }
+      highlight(b.oop ? 'oop' : 'dunk');
+    }
     chargeSpecial(shooter.team, b.isThree?26:20);
     if(Game.pendingAssist && shooter.team==='home' && !shooter.isUser){
       Game.stats.assists++; gainXP(6); Game.pendingAssist=null;
@@ -3884,6 +4054,7 @@ function resolveShot(){
     // the ball drops through the net and bounces under the hoop
     b.inAir=false; b.loose=false; b.dead=true; b.netDrop=0.22;
     b.y=COURT.hoopY; b.h=RIM_H-2; b.dunk=false;
+    if(fouled && b.layup && Math.random()<0.5) knockDown(shooter, -inwardOf(b.hoopX)*-1, null);   // took a hit on the way up
     if(fouled){
       Game.banner={ text:'AND ONE!', t:1.1 };
       if(b.fouler) commitFoul(shooter.team, shooter, true, b.fouler);
@@ -4111,6 +4282,8 @@ function updateAI(dt){
     if(p.isUser || p.isUser2) return;
     if(Game.phase==='inbound' && p===Game.inbounder) return;
     if(p.stunTimer>0){ p.stunTimer-=dt; p.moving=false; stepJump(p, dt); return; }
+    if(p.spinT>0 || p.euroT>0){ stepJump(p, dt); return; }
+    if(p.hasBall) checkCharge(p);
     if(p.buffTimer>0){ p.buffTimer-=dt; if(p.buffTimer<=0) p.buffed=false; }
     p.aiTimer -= dt;
 
@@ -4163,6 +4336,8 @@ function updateAI(dt){
           p.aiTimer=1.0+Math.random()*0.5; aiShoot(p);
         } else if(Game.shotClock<4){                     // beat the shot clock
           p.aiTimer=1.0; aiShoot(p);
+        } else if(guarded && dHoop<420 && Math.random()<0.18*rating && spinMove(p)){   // spin past the man
+          p.aiTimer=0.5;
         } else if(guarded && Math.random()<0.5){         // kick it out when pressured
           p.aiTimer=0.9; doPass(p);
         } else if(isThreeSpot && wideOpen && Math.random()<0.22*rating){   // open three
@@ -4824,10 +4999,25 @@ function poseAngles(name, t){
     case 'pass':   return { lean:8, crouch:1, bob:0, fT:20, fS:4, bT:-14, bS:-6, fU:88, fL:84, bU:80, bL:76 };
     case 'inbound':return { lean:-2, crouch:0, bob:0, fT:8, fS:2, bT:-8, bS:-2, fU:165, fL:200, bU:155, bL:195 };
     case 'stun':   return { lean:-10+S*6, crouch:0.8, bob:0, fT:6, fS:0, bT:-6, bS:0, fU:20+S*20, fL:10, bU:-20-S*20, bL:-10 };
+    // attacking the rim: low, leaning in, ball pounded low on the outside, off-arm up to protect it
+    case 'drive':{ const d=run(1.2,20); d.crouch=1.8; d.fU=18; d.fL=28+Math.max(0,S)*26; d.bU=78; d.bL=96; return d; }
+    // spin move: arms swing out as the body whips around (facing flips halfway)
+    case 'spin':   return { lean:6, crouch:1.6, bob:0, fT:24-t*30, fS:6, bT:-24+t*30, bS:-8, fU:95-t*40, fL:100, bU:-70+t*40, bL:-40 };
+    // euro step: long lateral stride, ball high and away
+    case 'euro':   return { lean:10, crouch:1.2, bob:0, fT:48, fS:22, bT:-38, bS:-58, fU:125, fL:150, bU:60, bL:90 };
+    // hanging on the rim after a dunk
+    case 'hang':   return { lean:-4, crouch:0, bob:0, fT:12, fS:2, bT:-6, bS:-14, fU:178, fL:178, bU:24, bL:36 };
+    // knocked down: stumble back (0-.25), sit (.25-.72), push up (.72-1)
+    case 'fall':{
+      if(t<0.25){ const k=t/0.25; return { lean:-34*k, crouch:2*k, bob:0, fT:10+20*k, fS:6, bT:-18+30*k, bS:-10, fU:60+90*k, fL:80+80*k, bU:120+40*k, bL:150 }; }
+      if(t<0.72){ return { lean:-24, crouch:8.2, bob:0, fT:84, fS:76, bT:80, bS:82, fU:-38, fL:-58, bU:-48, bL:-70 }; }
+      const k=(t-0.72)/0.28;
+      return { lean:-24+30*k, crouch:8.2-7.6*k, bob:0, fT:84-70*k, fS:76-100*k, bT:80-90*k, bS:82-80*k, fU:-38+60*k, fL:-58+90*k, bU:-48+50*k, bL:-70+90*k };
+    }
     default:       return poseAngles('idle', t);
   }
 }
-const POSE_FRAMES = { idle:4, run:8, sprint:8, dribble:6, dribbleRun:8, defense:4, gather:4, stun:4 };
+const POSE_FRAMES = { idle:4, run:8, sprint:8, dribble:6, dribbleRun:8, drive:8, defense:4, gather:4, stun:4, fall:12, spin:6 };
 function rasterPlayer(pal, look, name, t, num){
   const A = poseAngles(name, t);
   const G = new Array(FW*FH).fill(null);
@@ -4922,7 +5112,12 @@ function getFrame(team, look, isAway, name, t, num){
 }
 // pick the animation for a player this frame
 function poseFor(p){
+  if(p.poseOverride) return p.poseOverride;           // instant replay
   const b=Game.ball;
+  if(p.fallT>0) return ['fall', Math.min(0.999, 1-p.fallT/FALL_DUR)];
+  if(p.hangT>0) return ['hang', 0];
+  if(p.spinT>0) return ['spin', Math.min(0.999, 1-p.spinT/SPIN_DUR)];
+  if(p.euroT>0) return ['euro', 0];
   if(p.stunTimer>0) return ['stun', (Game.time*2)%1];
   if(p.dunkT>0 || (b.inAir && b.dunk && b.shooter===p && p.jumpH>0)) return ['dunk',0];
   if((p.isUser && p.hasBall && Game.shotMeter.active) || (p.isUser2 && p.hasBall && Game.shotMeter2.active)){
@@ -4935,6 +5130,9 @@ function poseFor(p){
   if(p.celebT>0) return ['celebrate',0];
   if(p.hasBall){
     const ph = ((p.dribbleT||0)/Math.PI) % 1;            // one arm pump per bounce
+    // charging at the rim at speed = attack dribble
+    const toRim = Math.sign(attackingHoopX(p.team)-p.x)===p.facing;
+    if(p.moving && toRim && (p.speedFrac||0)>0.55) return ['drive', p.animT*0.11];
     return p.moving ? ['dribbleRun', p.animT*0.11] : ['dribble', ph];
   }
   const off = b.holder ? b.holder.team : (b.passing ? b.passTeam : null);
@@ -5025,6 +5223,7 @@ function drawParticles(){
 /* ---------------- camera / frame ---------------- */
 function worldToScreen(x, y){ return { x:(x-Game.camXr)*ZOOM, y:y*ZOOM }; }
 function render(){
+  if(Game.replay && !Game.inReplay){ renderReplay(); return; }
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle='#0d0f13';
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -5066,6 +5265,7 @@ function render(){
   ctx.drawImage(vignetteFor(Game.arenaKey), 0, 0);
   if(Game.promo) return;          // debug-only: clean frame for store art
 
+  if(Game.inReplay) return;
   // ---- screen-space overlays (crisp pixel font) ----
   drawLabels();
   drawFloats();
@@ -5095,6 +5295,7 @@ const TIPS = {
   pass:    ['X PASSES.  WITHOUT THE BALL, X CALLS FOR IT', 'PASS MOVES THE BALL.  WITHOUT IT, PASS CALLS FOR IT'],
   defense: ['ON DEFENSE: X TO STEAL, SPACE TO JUMP AND BLOCK', 'ON DEFENSE: PASS TO STEAL, SHOOT TO JUMP AND BLOCK'],
   special: ['SPECIAL READY!  PRESS C NEAR THE RIM TO DUNK', 'SPECIAL READY!  TAP SPECIAL NEAR THE RIM TO DUNK'],
+  spin:    ['DEFENDER IN YOUR WAY?  PRESS C TO SPIN PAST', 'DEFENDER IN YOUR WAY?  TAP SPECIAL TO SPIN PAST'],
   contest: ['HOLD SPACE AND RELEASE IN THE GREEN.  MONEY BALLS = 2', 'HOLD SHOOT AND RELEASE IN THE GREEN.  MONEY BALLS = 2'],
   oop:     ['CUTTING TO THE RIM?  PRESS X TO CALL FOR AN ALLEY-OOP', 'CUTTING TO THE RIM?  TAP PASS TO CALL FOR AN ALLEY-OOP'],
   pump:    ['DEFENDER CLOSE?  TAP SPACE QUICKLY TO PUMP FAKE', 'DEFENDER CLOSE?  TAP SHOOT QUICKLY TO PUMP FAKE']
@@ -5115,6 +5316,7 @@ function updateTips(dt){
   if(Game.stats.fga>0 && u.hasBall) showTip('pass');
   if(b.holder && b.holder.team==='away' && Game.time>8) showTip('defense');
   if(Game.special>=100) showTip('special');
+  if(Game.time>10 && u.hasBall && Game.special<100 && Game.away.some(d=>dist2(d,u)<70*70)) showTip('spin');
   if(Game.time>14 && !u.hasBall && b.holder && b.holder.team==='home' && rimDist(u)<230) showTip('oop');
   if(Game.time>18 && u.hasBall && Game.away.some(d=>dist2(d,u)<75*75) && rimDist(u)>200) showTip('pump');
 }
@@ -5454,7 +5656,7 @@ function checkOrientation(){
 window.addEventListener('resize', checkOrientation);
 checkOrientation();
 // debug handle for automated tests (read-only use)
-if(/[?&#]debug/.test(location.href)) window.__HL = { getFrame:(...a)=>getFrame(...a), TEAMS, FW, FH, stepShot:(b,dt)=>stepShot(b,dt), get Game(){ return Game; }, get S(){ return S; }, KEYS, KB, PREFS, get PROFILE(){ return PROFILE; }, shoot:(p,t)=>releaseShot(p,t),
+if(/[?&#]debug/.test(location.href)) window.__HL = { knockDown:(...a)=>knockDown(...a), spinMove:(u)=>spinMove(u), highlight:(r)=>highlight(r), getFrame:(...a)=>getFrame(...a), TEAMS, FW, FH, stepShot:(b,dt)=>stepShot(b,dt), get Game(){ return Game; }, get S(){ return S; }, KEYS, KB, PREFS, get PROFILE(){ return PROFILE; }, shoot:(p,t)=>releaseShot(p,t),
   tick(n){ for(let i=0;i<n && Game && !Game.over;i++) update(1/60); if(Game && !Game.over) render(); } };
 })();
 </script>

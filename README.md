@@ -33,6 +33,12 @@ in a browser and play.
   release, layups, dunks and celebrations. Floor reflections, a crowd that
   jumps on big plays, arena lighting, ball trails, slow motion on dunks.
 - Alley-oops (call for one near the rim, or lob it to a cutter) and pump fakes.
+- Driving and contact: attack-dribble drives, spin moves, euro steps on
+  contested layups, hanging on the rim after dunks, and knockdowns with a
+  full fall-and-get-up animation (broken ankles, posterizers, charges,
+  blocking fouls, hard fouls).
+- Instant replays of dunks, alley-oops, posters and buzzer-beaters
+  (slow motion, skippable, can be turned off in Settings).
 - Settings (quarter length, screen shake, coaching tips), first-game coaching
   tips, and gamepad support (two pads for Versus).
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
