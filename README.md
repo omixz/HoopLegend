@@ -25,8 +25,14 @@ in a browser and play.
   portal iframes.
 - Five courts to pick from the title screen: Pro Arena, Blacktop, Beach,
   Old Gym and Rooftop (or Random).
-- Ball physics: true parabolic shots to an elevated rim, rim and backboard
-  bounces, physical passes that lead the receiver, and out-of-bounds calls.
+- Real ball physics: shots fly a true arc and collide with the rim and
+  backboard, so rattles, rolls, bank shots, in-and-outs and put-backs happen
+  on their own. Passes lead the receiver; out-of-bounds is called.
+- Animated pixel players built from a skeleton: run and sprint cycles,
+  dribbling with the ball in the hand, defensive slides, jump-shot gather and
+  release, layups, dunks and celebrations. Floor reflections, a crowd that
+  jumps on big plays, arena lighting, ball trails, slow motion on dunks.
+- Alley-oops (call for one near the rim, or lob it to a cutter) and pump fakes.
 - Settings (quarter length, screen shake, coaching tips), first-game coaching
   tips, and gamepad support (two pads for Versus).
 - Retro pixel-sprite rendering, an original synthesized 8-bit soundtrack/SFX
